@@ -24,6 +24,7 @@ const HEADERS = [
 ];
 
 const ALLOWED_STATUSES = ['〇 良好', '△ 経過観察', '× 要修繕'];
+const PROCESS_STATUSES = ['下書き', '確定', 'PDF保存済み', 'メール確認', '送信完了', '送信エラー', '取り消し'];
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('Index')
@@ -110,7 +111,7 @@ function getInspectionData() {
       photoPcs: String(row[9] || ''),      // J列: パワコン写真
       photoSub: String(row[10] || ''),
       details: String(row[11] || ''),
-      processStatus: String(row[12] || '未処理'),
+      processStatus: String(row[12] || '下書き'),
       pdfUrl: String(row[13] || '')         // N列: PDF_URL
     };
   }).filter(function (item) { 
@@ -152,7 +153,7 @@ function saveInspectionData(form) {
       photoPcsUrl,         // J: パワコン写真 (案1)
       photoSubUrl,         // K: 異常写真
       data.details,        // L: 詳細数値
-      '未処理',            // M: ステータス
+      '下書き',            // M: ステータス
       ''                   // N: PDF_URL (PDF発行時更新)
     ]);
     SpreadsheetApp.flush();
@@ -253,6 +254,9 @@ function createPdfReport_(row, retainPdf) {
  */
 function previewPdfReport(rowIndex) {
   const row = getRow_(rowIndex);
+  if (!['確定', 'PDF保存済み', 'メール確認', '送信エラー'].includes(row[12])) {
+    throw new Error('内容を確定してからPDFプレビューを実行してください。');
+  }
   const pdf = createPdfReport_(row, false);
   try {
     return { 
@@ -263,6 +267,42 @@ function previewPdfReport(rowIndex) {
   } finally {
     pdf.setTrashed(true); // プレビュー一時ファイル削除
   }
+}
+
+function confirmInspection(rowIndex) {
+  return updateProcessStatus_(rowIndex, '確定', ['下書き']);
+}
+
+function savePdfReport(rowIndex) {
+  const targetRowIndex = resolveRowIndex_(rowIndex);
+  const sheet = getInspectionSheet_();
+  const row = getRow_(targetRowIndex);
+  if (!['確定', 'PDF保存済み', 'メール確認', '送信エラー'].includes(row[12])) {
+    throw new Error('内容を確定してからPDFを保存してください。');
+  }
+
+  const pdf = createPdfReport_(row, true);
+  sheet.getRange(targetRowIndex, 13).setValue('PDF保存済み');
+  sheet.getRange(targetRowIndex, 14).setValue(pdf.getUrl());
+  SpreadsheetApp.flush();
+  return { success: true, url: pdf.getUrl(), name: pdf.getName() };
+}
+
+function confirmEmail(rowIndex) {
+  return updateProcessStatus_(rowIndex, 'メール確認', ['PDF保存済み']);
+}
+
+function updateProcessStatus_(rowIndex, nextStatus, allowedCurrentStatuses) {
+  if (!PROCESS_STATUSES.includes(nextStatus)) throw new Error('不正な処理ステータスです。');
+  const targetRowIndex = resolveRowIndex_(rowIndex);
+  const sheet = getInspectionSheet_();
+  const row = getRow_(targetRowIndex);
+  if (!allowedCurrentStatuses.includes(row[12])) {
+    throw new Error('現在の状態（' + row[12] + '）から「' + nextStatus + '」へ変更できません。');
+  }
+  sheet.getRange(targetRowIndex, 13).setValue(nextStatus);
+  SpreadsheetApp.flush();
+  return { success: true, status: nextStatus };
 }
 
 /**
@@ -280,7 +320,11 @@ function sendReportEmail(rowIndex) {
   const email = normalizeEmail_(row[5]);
   if (!email) throw new Error('施主様のメールアドレス形式が不正です。');
 
-  const pdf = createPdfReport_(row, true);
+  if (row[12] !== 'メール確認') {
+    throw new Error('メール内容を確認してから送信してください。');
+  }
+  const pdfId = extractDriveId_(row[13]);
+  const pdf = DriveApp.getFileById(pdfId);
   const pdfUrl = pdf.getUrl();
 
   try {

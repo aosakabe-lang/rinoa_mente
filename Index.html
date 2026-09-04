@@ -365,7 +365,7 @@
         <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl">
           <div class="flex items-center gap-2 text-xs text-slate-400">
             <i data-lucide="info" class="w-4 h-4 text-cyan-400"></i>
-            <span>保存後、PDF即時発行および施主様への自動メール送信が可能です。</span>
+            <span>保存後は下書きとして保持され、内容確定後にPDF保存・メール送信へ進みます。</span>
           </div>
           <button type="submit" id="submitBtn" class="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-500 hover:from-blue-500 hover:to-emerald-400 text-white font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all transform active:scale-95">
             <i data-lucide="save" class="w-4 h-4"></i>
@@ -1038,6 +1038,17 @@
           ? `<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">送信完了</span>`
           : `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 text-[10px]">${item.processStatus || '未処理'}</span>`;
 
+        let workflowActions = '';
+        if (item.processStatus === '下書き' || item.processStatus === '未処理') {
+          workflowActions = `<button onclick="confirmInspection('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-amber-600/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold">確定</button>`;
+        } else if (['確定', '送信エラー'].includes(item.processStatus)) {
+          workflowActions = `<button onclick="openPdfModal('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-blue-600/20 text-blue-400 border border-blue-500/30 text-[11px] font-bold">PDFプレビュー</button><button onclick="savePdfReport('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 text-[11px] font-bold">PDF保存</button>`;
+        } else if (item.processStatus === 'PDF保存済み') {
+          workflowActions = `<button onclick="confirmEmail('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-amber-600/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold">メール確認</button>`;
+        } else if (item.processStatus === 'メール確認') {
+          workflowActions = `<button onclick="sendReportEmail('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 text-[11px] font-bold">送信</button>`;
+        }
+
         const hasPhotos = (item.photoMain || item.photoPcs || item.photoSub) 
           ? `<span class="text-cyan-400 font-bold flex items-center gap-1"><i data-lucide="image" class="w-3.5 h-3.5"></i> あり</span>`
           : `<span class="text-slate-600">なし</span>`;
@@ -1056,12 +1067,7 @@
           <td class="px-4 py-3.5">${hasPhotos}</td>
           <td class="px-4 py-3.5">${processBadge}</td>
           <td class="px-4 py-3.5 text-right space-x-1">
-            <button onclick="openPdfModal('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 text-[11px] font-bold transition-all">
-              PDFプレビュー
-            </button>
-            <button onclick="sendReportEmail('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-[11px] font-bold transition-all">
-              送付
-            </button>
+            ${workflowActions}
             <button onclick="deleteInspectionRecord('${item.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-all" title="非表示">
               <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
             </button>
@@ -1087,6 +1093,67 @@
       });
 
       renderHistoryTable(filtered);
+    }
+
+    function runWorkflowAction(id, action, successMessage) {
+      if (window.google && google.script && google.script.run) {
+        showToast('処理中', '処理を実行しています...', 'info');
+        google.script.run
+          .withSuccessHandler(() => {
+            showToast('完了', successMessage, 'success');
+            loadInspectionData();
+          })
+          .withFailureHandler((error) => {
+            showToast('エラー', error.message || '処理に失敗しました', 'danger');
+            loadInspectionData();
+          })[action](id);
+        return;
+      }
+
+      const list = getStoredData();
+      const item = list.find(record => record.id === id);
+      if (!item) return;
+      const nextStatus = {
+        confirmInspection: '確定',
+        savePdfReport: 'PDF保存済み',
+        confirmEmail: 'メール確認'
+      }[action];
+      if (nextStatus) {
+        item.processStatus = nextStatus;
+        setStoredData(list);
+        showToast('完了', successMessage, 'success');
+        loadInspectionData();
+      }
+    }
+
+    function confirmInspection(id) {
+      if (confirm('入力内容を確定します。確定後はPDF作成へ進みます。')) {
+        runWorkflowAction(id, 'confirmInspection', '点検内容を確定しました');
+      }
+    }
+
+    function savePdfReport(id) {
+      if (window.google && google.script && google.script.run) {
+        showToast('処理中', 'PDFを保存しています...', 'info');
+        google.script.run
+          .withSuccessHandler((result) => {
+            showToast('PDF保存完了', result.name + ' を保存しました', 'success');
+            loadInspectionData();
+            window.open(result.url, '_blank', 'noopener');
+          })
+          .withFailureHandler((error) => {
+            showToast('エラー', error.message || 'PDF保存に失敗しました', 'danger');
+          })
+          .savePdfReport(id);
+        return;
+      }
+      runWorkflowAction(id, 'savePdfReport', 'PDFを保存しました');
+    }
+
+    function confirmEmail(id) {
+      if (confirm('保存済みPDFと送信先メールアドレスを確認しましたか？')) {
+        runWorkflowAction(id, 'confirmEmail', 'メール内容を確認しました');
+      }
     }
 
     function openPdfModal(id) {

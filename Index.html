@@ -811,7 +811,35 @@
       }
     }
 
-    function previewUploadImage(input, previewId) {
+    function compressImageFile(file, maxWidth = 1000, quality = 0.7) {
+      return new Promise((resolve, reject) => {
+        if (!file) {
+          resolve('');
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('画像ファイルの読み込みに失敗しました。'));
+        reader.onload = (event) => {
+          const image = new Image();
+          image.onerror = () => reject(new Error('画像形式を読み込めません。'));
+          image.onload = () => {
+            const scale = Math.min(1, maxWidth / image.width);
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(image.width * scale));
+            canvas.height = Math.max(1, Math.round(image.height * scale));
+
+            const context = canvas.getContext('2d');
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          image.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function previewUploadImage(input, previewId) {
       const file = input.files[0];
       const img = document.getElementById(previewId);
       const container = document.getElementById(previewId + 'Container');
@@ -822,19 +850,18 @@
         return;
       }
 
-      if (file.size > 5 * 1024 * 1024) {
-        showToast('エラー', '画像ファイルサイズは5MB以下にしてください。', 'danger');
-        input.value = '';
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        img.src = e.target.result;
+      try {
+        const compressedData = await compressImageFile(file);
+        img.src = compressedData;
         img.classList.remove('hidden');
         if (container) container.classList.add('hidden');
-      };
-      reader.readAsDataURL(file);
+      } catch (error) {
+        showToast('エラー', error.message, 'danger');
+        input.value = '';
+        img.src = '';
+        img.classList.add('hidden');
+        if (container) container.classList.remove('hidden');
+      }
     }
 
     function showToast(title, message, type = 'info') {
@@ -876,9 +903,24 @@
       const comment = document.getElementById('comment').value;
       const details = document.getElementById('details').value;
 
-      const photoMain = document.getElementById('previewMain').src || '';
-      const photoPcs = document.getElementById('previewPcs').src || '';
-      const photoSub = document.getElementById('previewSub').src || '';
+      const photoInputs = [
+        document.getElementById('photoMain'),
+        document.getElementById('photoPcs'),
+        document.getElementById('photoSub')
+      ];
+
+      let compressedPhotos;
+      try {
+        compressedPhotos = await Promise.all(photoInputs.map(input =>
+          compressImageFile(input && input.files[0])
+        ));
+      } catch (error) {
+        showToast('エラー', error.message, 'danger');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> <span>点検データを保存・同期</span>`;
+        lucide.createIcons();
+        return;
+      }
 
       const now = new Date();
       const dateStr = now.getFullYear() + '/' + 
@@ -897,9 +939,12 @@
         email,
         status,
         comment: comment || "特記事項なし",
-        photoMain: photoMain.startsWith('data:') ? photoMain : '',
-        photoPcs: photoPcs.startsWith('data:') ? photoPcs : '',
-        photoSub: photoSub.startsWith('data:') ? photoSub : '',
+        photoMainData: compressedPhotos[0],
+        photoPcsData: compressedPhotos[1],
+        photoSubData: compressedPhotos[2],
+        photoMain: compressedPhotos[0],
+        photoPcs: compressedPhotos[1],
+        photoSub: compressedPhotos[2],
         details: details || "特記事項なし",
         processStatus: "未処理",
         pdfUrl: ""
@@ -914,6 +959,7 @@
           })
           .withFailureHandler((err) => {
             showToast('エラー', err.message || '保存に失敗しました', 'danger');
+            resetSubmitButton();
           })
           .saveInspectionData(newRecord);
       } else {
@@ -929,6 +975,13 @@
       }
     }
 
+    function resetSubmitButton() {
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> <span>点検データを保存・同期</span>`;
+      lucide.createIcons();
+    }
+
     function resetForm() {
       document.getElementById('inspectionForm').reset();
       ['previewMain', 'previewPcs', 'previewSub'].forEach(id => {
@@ -938,10 +991,7 @@
         const container = document.getElementById(id + 'Container');
         if (container) container.classList.remove('hidden');
       });
-      const submitBtn = document.getElementById('submitBtn');
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> <span>点検データを保存・同期</span>`;
-      lucide.createIcons();
+      resetSubmitButton();
     }
 
     function loadInspectionData() {

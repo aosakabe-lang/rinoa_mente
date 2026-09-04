@@ -122,19 +122,22 @@ function getInspectionData() {
  * 新規点検データの保存（LockServiceによる排他制御 & 14列追記）
  */
 function saveInspectionData(form) {
-  const data = validateForm_(form);
-  const id = 'REN-' + Utilities.getUuid().substring(0, 8).toUpperCase() + '-2026';
-  const folder = getOutputFolder_();
-
-  // 画像ファイル保存処理
-  const photoMainUrl = saveImage_(data.photoMainData, id + '_01全体.jpg', folder);
-  const photoPcsUrl  = saveImage_(data.photoPcsData,  id + '_02パワコン.jpg', folder);
-  const photoSubUrl  = saveImage_(data.photoSubData,  id + '_03異常.jpg', folder);
-
   const lock = LockService.getDocumentLock();
-  lock.waitLock(30000); // 同時書き込み競合待ち（最大30秒）
-
+  const savedImageUrls = [];
   try {
+    const data = validateForm_(form);
+    const id = 'REN-' + Utilities.getUuid().substring(0, 8).toUpperCase() + '-2026';
+    const folder = getOutputFolder_();
+
+    lock.waitLock(30000);
+
+    const photoMainUrl = saveImage_(data.photoMainData, id + '_01全体.jpg', folder);
+    const photoPcsUrl  = saveImage_(data.photoPcsData, id + '_02パワコン.jpg', folder);
+    const photoSubUrl  = saveImage_(data.photoSubData, id + '_03異常.jpg', folder);
+    [photoMainUrl, photoPcsUrl, photoSubUrl].forEach(function (url) {
+      if (url) savedImageUrls.push(url);
+    });
+
     const sheet = getInspectionSheet_();
     sheet.appendRow([
       id,                  // A: ID
@@ -152,48 +155,97 @@ function saveInspectionData(form) {
       '未処理',            // M: ステータス
       ''                   // N: PDF_URL (PDF発行時更新)
     ]);
+    SpreadsheetApp.flush();
+
+    return { success: true, message: '点検データ（14項目）をスプレッドシートへ正常保存しました。' };
+  } catch (error) {
+    Logger.log(JSON.stringify({
+      function: 'saveInspectionData',
+      imageUrls: savedImageUrls,
+      message: error.message,
+      stack: error.stack
+    }));
+    savedImageUrls.forEach(function (url) {
+      try {
+        DriveApp.getFileById(extractDriveId_(url)).setTrashed(true);
+      } catch (cleanupError) {
+        Logger.log(JSON.stringify({
+          function: 'saveInspectionData.cleanup',
+          url: url,
+          message: cleanupError.message
+        }));
+      }
+    });
+    throw new Error('点検データの保存に失敗しました: ' + error.message);
   } finally {
     lock.releaseLock();
   }
-
-  return { success: true, message: '点検データ（14項目）をスプレッドシートへ正常保存しました。' };
 }
 
 /**
  * PDFレポート作成 ＆ スプレッドシート（N列）へのPDF URL記録
  */
 function createPdfReport_(row, retainPdf) {
-  const client = safeFilePart_(row[3]);
-  const date = formatDate_(row[1], 'yyyyMMdd');
-  const folder = getOutputFolder_();
-  
-  // テンプレート複製
-  const templateId = getOrCreateTemplateId_(false);
-  const copy = DriveApp.getFileById(templateId).makeCopy('点検報告書_' + client + '様_' + date, folder);
-  const doc = DocumentApp.openById(copy.getId());
-  const body = doc.getBody();
+  let copy = null;
+  try {
+    if (!row || row.length < HEADERS.length) {
+      throw new Error('PDF生成に必要な行データが不足しています。');
+    }
 
-  // プレースホルダー置換（14列対応）
-  replaceText_(body, '{{施主名}}', row[3]);
-  replaceText_(body, '{{現場住所}}', row[4] || '未登録');
-  replaceText_(body, '{{点検日時}}', formatDate_(row[1], 'yyyy/MM/dd HH:mm'));
-  replaceText_(body, '{{担当者}}', row[2]);
-  replaceText_(body, '{{総合判定}}', row[6]);
-  replaceText_(body, '{{見解コメント}}', row[7] || '特記事項なし');
-  replaceText_(body, '{{詳細数値}}', row[11] || '特記事項なし');
+    const client = safeFilePart_(row[3]);
+    const date = formatDate_(row[1], 'yyyyMMdd');
+    const folder = getOutputFolder_();
+    const templateId = getOrCreateTemplateId_(false);
 
-  // 画像埋め込み（全体・パワコン・異常）
-  replacePhoto_(body, '{{現場全体写真}}', row[8]);
-  replacePhoto_(body, '{{パワコン写真}}', row[9]);
-  replacePhoto_(body, '{{異常箇所写真}}', row[10]);
+    copy = DriveApp.getFileById(templateId).makeCopy(
+      '点検報告書_' + client + '様_' + date,
+      folder
+    );
+    const doc = DocumentApp.openById(copy.getId());
+    const body = doc.getBody();
 
-  doc.saveAndClose();
+    replaceText_(body, '{{施主名}}', row[3]);
+    replaceText_(body, '{{現場住所}}', row[4] || '未登録');
+    replaceText_(body, '{{点検日時}}', formatDate_(row[1], 'yyyy/MM/dd HH:mm'));
+    replaceText_(body, '{{担当者}}', row[2]);
+    replaceText_(body, '{{総合判定}}', row[6]);
+    replaceText_(body, '{{見解コメント}}', row[7] || '特記事項なし');
+    replaceText_(body, '{{詳細数値}}', row[11] || '特記事項なし');
 
-  // PDF出力
-  const pdfFile = folder.createFile(copy.getAs(MimeType.PDF)).setName('太陽光点検報告書_' + client + '様_' + date + '.pdf');
-  copy.setTrashed(true); // 作業用Doc削除
+    replacePhoto_(body, '{{現場全体写真}}', row[8]);
+    replacePhoto_(body, '{{パワコン写真}}', row[9]);
+    replacePhoto_(body, '{{異常箇所写真}}', row[10]);
 
-  return pdfFile;
+    doc.saveAndClose();
+    SpreadsheetApp.flush();
+
+    const pdfFile = folder.createFile(copy.getAs(MimeType.PDF)).setName(
+      '太陽光点検報告書_' + client + '様_' + date + '.pdf'
+    );
+    copy.setTrashed(true);
+    return pdfFile;
+  } catch (error) {
+    console.error(JSON.stringify({
+      function: 'createPdfReport_',
+      recordId: row && row[0],
+      templateId: PropertiesService.getScriptProperties().getProperty('TEMPLATE_DOC_ID'),
+      outputFolderId: PropertiesService.getScriptProperties().getProperty('OUTPUT_FOLDER_ID'),
+      temporaryDocId: copy && copy.getId(),
+      message: error.message,
+      stack: error.stack
+    }));
+    Logger.log(JSON.stringify({
+      function: 'createPdfReport_',
+      recordId: row && row[0],
+      templateId: PropertiesService.getScriptProperties().getProperty('TEMPLATE_DOC_ID'),
+      outputFolderId: PropertiesService.getScriptProperties().getProperty('OUTPUT_FOLDER_ID'),
+      temporaryDocId: copy && copy.getId(),
+      message: error.message,
+      stack: error.stack
+    }));
+    if (copy) copy.setTrashed(true);
+    throw new Error('PDF生成に失敗しました: ' + error.message);
+  }
 }
 
 /**
@@ -325,6 +377,22 @@ function replacePhoto_(body, placeholder, url) {
       image.setWidth(300).setHeight(Math.round(image.getHeight() * 300 / width));
     }
   } catch (error) {
+    console.error(JSON.stringify({
+      function: 'replacePhoto_',
+      placeholder: placeholder,
+      driveId: typeof driveId === 'undefined' ? '' : driveId,
+      url: url,
+      message: error.message,
+      stack: error.stack
+    }));
+    Logger.log(JSON.stringify({
+      function: 'replacePhoto_',
+      placeholder: placeholder,
+      driveId: typeof driveId === 'undefined' ? '' : driveId,
+      url: url,
+      message: error.message,
+      stack: error.stack
+    }));
     replaceText_(body, placeholder, '（画像読み込みエラー）');
   }
 }
@@ -367,7 +435,23 @@ function getInspectionSheet_() {
 function getOutputFolder_() {
   const id = PropertiesService.getScriptProperties().getProperty('OUTPUT_FOLDER_ID');
   if (!id) throw new Error('OUTPUT_FOLDER_ID が未設定です。GASエディタで setupOutputFolder を一度実行してください。');
-  return DriveApp.getFolderById(id);
+  try {
+    return DriveApp.getFolderById(id);
+  } catch (error) {
+    console.error(JSON.stringify({
+      function: 'getOutputFolder_',
+      outputFolderId: id,
+      message: error.message,
+      stack: error.stack
+    }));
+    Logger.log(JSON.stringify({
+      function: 'getOutputFolder_',
+      outputFolderId: id,
+      message: error.message,
+      stack: error.stack
+    }));
+    throw new Error('出力フォルダにアクセスできません。IDと権限を確認してください: ' + error.message);
+  }
 }
 
 function getRow_(rowIndex) {

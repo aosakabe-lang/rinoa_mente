@@ -270,7 +270,8 @@ function previewPdfReport(rowIndex) {
  */
 function sendReportEmail(rowIndex) {
   const sheet = getInspectionSheet_();
-  const row = getRow_(rowIndex);
+  const targetRowIndex = resolveRowIndex_(rowIndex);
+  const row = getRow_(targetRowIndex);
   
   if (row[12] === '送信完了') {
     throw new Error('この報告書はすでに送信済みです。再送が必要な場合は管理者がステータスを変更してください。');
@@ -295,12 +296,13 @@ function sendReportEmail(rowIndex) {
     );
 
     // ステータス（M列: 13列目）と PDF_URL（N列: 14列目）を上書き更新
-    sheet.getRange(rowIndex, 13).setValue('送信完了');
-    sheet.getRange(rowIndex, 14).setValue(pdfUrl);
+    sheet.getRange(targetRowIndex, 13).setValue('送信完了');
+    sheet.getRange(targetRowIndex, 14).setValue(pdfUrl);
+    SpreadsheetApp.flush();
 
     return { success: true, message: client + '様へ点検報告書メールを正常送信しました。' };
   } catch (error) {
-    sheet.getRange(rowIndex, 13).setValue('送信エラー');
+    sheet.getRange(targetRowIndex, 13).setValue('送信エラー');
     throw new Error('メール送信に失敗しました: ' + error.message);
   }
 }
@@ -455,11 +457,33 @@ function getOutputFolder_() {
 }
 
 function getRow_(rowIndex) {
-  if (!Number.isInteger(rowIndex) || rowIndex < 2) throw new Error('不正な行番号です。');
   const sheet = getInspectionSheet_();
-  const row = sheet.getRange(rowIndex, 1, 1, HEADERS.length).getValues()[0];
-  if (!row[0]) throw new Error('対象の点検データが見つかりません。');
-  return row;
+  if (Number.isInteger(rowIndex) && rowIndex >= 2) {
+    const row = sheet.getRange(rowIndex, 1, 1, HEADERS.length).getValues()[0];
+    if (!row[0]) throw new Error('対象の点検データが見つかりません。');
+    return row;
+  }
+
+  const recordId = String(rowIndex || '').trim();
+  if (!recordId) throw new Error('行番号または点検IDが必要です。');
+  const values = sheet.getDataRange().getValues();
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][0]) === recordId) return values[i];
+  }
+  throw new Error('点検IDに一致するデータが見つかりません: ' + recordId);
+}
+
+function resolveRowIndex_(rowIndex) {
+  if (Number.isInteger(rowIndex) && rowIndex >= 2) return rowIndex;
+
+  const recordId = String(rowIndex || '').trim();
+  if (!recordId) throw new Error('行番号または点検IDが必要です。');
+  const sheet = getInspectionSheet_();
+  const ids = sheet.getRange(2, 1, Math.max(sheet.getLastRow() - 1, 1), 1).getValues();
+  for (let i = 0; i < ids.length; i++) {
+    if (String(ids[i][0]) === recordId) return i + 2;
+  }
+  throw new Error('点検IDに一致する行が見つかりません: ' + recordId);
 }
 
 function normalizeEmail_(value) {

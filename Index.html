@@ -1090,6 +1090,24 @@
     }
 
     function openPdfModal(id) {
+      if (window.google && google.script && google.script.run) {
+        showToast('処理中', 'PDFを作成しています...', 'info');
+        google.script.run
+          .withSuccessHandler((result) => {
+            showToast('PDF作成完了', result.name + ' を作成しました', 'success');
+            const binary = atob(result.base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+            window.open(url, '_blank', 'noopener');
+          })
+          .withFailureHandler((error) => {
+            showToast('エラー', error.message || 'PDF作成に失敗しました', 'danger');
+          })
+          .previewPdfReport(id);
+        return;
+      }
+
       const list = getStoredData();
       const item = list.find(x => x.id === id);
       if (!item) return;
@@ -1134,6 +1152,21 @@
 
     function sendReportEmail(id) {
       if (confirm('この施主様宛に点検報告書PDFをメール送信しますか？')) {
+        if (window.google && google.script && google.script.run) {
+          showToast('処理中', 'PDF作成とメール送信を実行しています...', 'info');
+          google.script.run
+            .withSuccessHandler((result) => {
+              showToast('送信完了', result.message || '報告書を送信しました', 'success');
+              loadInspectionData();
+            })
+            .withFailureHandler((error) => {
+              showToast('エラー', error.message || '報告書の送信に失敗しました', 'danger');
+              loadInspectionData();
+            })
+            .sendReportEmail(id);
+          return;
+        }
+
         const list = getStoredData();
         const item = list.find(x => x.id === id);
         if (item) {

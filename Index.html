@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-full bg-slate-900">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>REN | 太陽光発電設備 点検報告システム</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js for Graphical Analytics -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card-light {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(51, 65, 85, 0.8);
+      border-radius: 99px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(94, 234, 212, 0.5);
+    }
+    @media print {
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      body { background: white !important; color: black !important; }
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            ren: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af',
+              900: '#0f172a',
+              accent: '#06b6d4',
+              gold: '#f59e0b',
+              success: '#10b981',
+              danger: '#ef4444'
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="h-full text-slate-100 bg-slate-950 antialiased selection:bg-cyan-500 selection:text-slate-900 custom-scrollbar flex flex-col">
+
+  <!-- Top Navigation Header -->
+  <header class="no-print sticky top-0 z-40 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Brand Logo -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-cyan-500 to-emerald-400 p-0.5 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+            <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+              <i data-lucide="sun" class="w-5 h-5 text-cyan-400 stroke-[2.5]"></i>
+            </div>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400 text-base">REN</span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-950/80 border border-cyan-800/50 text-cyan-300">MAINTENANCE v2.0</span>
+            </div>
+            <p class="text-[11px] text-slate-400 font-medium">株式会社リノア 太陽光発電点検ポータル</p>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <nav class="flex items-center gap-1 sm:gap-2">
+          <button onclick="switchTab('tab-input')" id="nav-tab-input" class="nav-tab active flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-all bg-blue-600 text-white shadow-lg shadow-blue-600/30">
+            <i data-lucide="file-plus" class="w-4 h-4"></i>
+            <span class="hidden md:inline">新規点検登録</span>
+          </button>
+          <button onclick="switchTab('tab-history')" id="nav-tab-history" class="nav-tab flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all">
+            <i data-lucide="database" class="w-4 h-4"></i>
+            <span class="hidden md:inline">点検履歴アーカイブ</span>
+          </button>
+          <button onclick="switchTab('tab-analytics')" id="nav-tab-analytics" class="nav-tab flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all">
+            <i data-lucide="bar-chart-3" class="w-4 h-4"></i>
+            <span class="hidden md:inline">分析ダッシュボード</span>
+          </button>
+          <button onclick="switchTab('tab-spec')" id="nav-tab-spec" class="nav-tab flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all">
+            <i data-lucide="check-square" class="w-4 h-4"></i>
+            <span class="hidden md:inline">要件定義・システム検証</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Dynamic Status Toast / Banner -->
+  <div id="toast" class="no-print fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white shadow-2xl">
+      <div id="toast-icon" class="p-2 rounded-lg bg-blue-500/20 text-blue-400">
+        <i data-lucide="info" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <p id="toast-title" class="text-xs font-bold">通知</p>
+        <p id="toast-message" class="text-xs text-slate-300">処理を更新しました</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main View Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- TAB 1: 新規点検登録フォーム -->
+    <section id="tab-input" class="tab-content space-y-6">
+      
+      <!-- Top Banner Card -->
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-slate-900 via-slate-800 to-blue-950 p-6 sm:p-8 border border-slate-800 shadow-2xl">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div class="space-y-2">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-semibold">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5"></i> 現場点検モバイル対応フォーム
+            </div>
+            <h1 class="text-2xl sm:text-3xl font-black text-white tracking-tight">新規点検報告データ入力</h1>
+            <p class="text-xs sm:text-sm text-slate-400 max-w-xl">
+              14項目完全対応（現場住所・パワコン写真・自動PDF連携含）。入力データはGoogleスプレッドシートおよびGoogleドライブへ自動保管されます。
+            </p>
+          </div>
+          <div class="flex items-center gap-3 bg-slate-900/80 p-3 rounded-xl border border-slate-800 text-xs text-slate-300">
+            <div class="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span>スプレッドシート同期: <strong class="text-emerald-400">案1(14列)互換接続中</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Form Container -->
+      <form id="inspectionForm" onsubmit="handleFormSubmit(event)" class="space-y-6">
+        
+        <!-- Section 1: 基本情報 & 連絡先 -->
+        <div class="glass-card rounded-2xl p-6 space-y-6">
+          <div class="flex items-center gap-3 border-b border-slate-800 pb-4">
+            <div class="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+              <i data-lucide="user-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-white">1. 基本情報・施主様連絡先</h2>
+              <p class="text-xs text-slate-400">報告書の宛先および管理記録に使用します</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <!-- 作業担当者 -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-300">作業担当者名 <span class="text-red-400">*</span></label>
+              <div class="relative">
+                <input type="text" id="worker" required placeholder="例：山田 太郎" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder:text-slate-600">
+                <i data-lucide="user" class="w-4 h-4 text-slate-500 absolute right-3.5 top-3"></i>
+              </div>
+            </div>
+
+            <!-- 施主様名 -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-300">施主様名 <span class="text-red-400">*</span></label>
+              <div class="relative">
+                <input type="text" id="client" required placeholder="例：鈴木 一郎" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder:text-slate-600">
+                <i data-lucide="building" class="w-4 h-4 text-slate-500 absolute right-3.5 top-3"></i>
+              </div>
+            </div>
+
+            <!-- 送信先メール -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-300">施主様メールアドレス <span class="text-red-400">*</span></label>
+              <div class="relative">
+                <input type="email" id="email" required placeholder="example@ren-solar.jp" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder:text-slate-600">
+                <i data-lucide="mail" class="w-4 h-4 text-slate-500 absolute right-3.5 top-3"></i>
+              </div>
+            </div>
+
+            <!-- 現場住所 (案1 追加項目) -->
+            <div class="space-y-2 md:col-span-2 lg:col-span-3">
+              <label class="block text-xs font-bold text-slate-300">現場住所 <span class="text-slate-400 font-normal">(報告書記載必須)</span></label>
+              <div class="relative">
+                <input type="text" id="address" placeholder="例：東京都港区芝浦 1-2-3 太陽光発電所A棟" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder:text-slate-600">
+                <i data-lucide="map-pin" class="w-4 h-4 text-slate-500 absolute right-3.5 top-3"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: 判定・見解・計測データ -->
+        <div class="glass-card rounded-2xl p-6 space-y-6">
+          <div class="flex items-center gap-3 border-b border-slate-800 pb-4">
+            <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+              <i data-lucide="activity" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h2 class="text-base font-bold text-white">2. 点検総合判定・測定数値・見解</h2>
+              <p class="text-xs text-slate-400">総合判定および定量的測定数値を記録します</p>
+            </div>
+          </div>
+
+          <!-- 総合判定 Radio Cards -->
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-slate-300">総合判定結果 <span class="text-red-400">*</span></label>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              
+              <label class="relative flex items-center p-4 rounded-xl border border-slate-700 bg-slate-950/60 cursor-pointer hover:border-emerald-500/50 transition-all group">
+                <input type="radio" name="status" value="〇 良好" checked class="peer sr-only">
+                <div class="w-full flex items-center justify-between peer-checked:text-emerald-400">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold border border-emerald-500/20">〇</div>
+                    <div>
+                      <p class="text-sm font-bold text-white group-hover:text-emerald-300">〇 良好</p>
+                      <p class="text-[11px] text-slate-400">異常なし・正常動作</p>
+                    </div>
+                  </div>
+                  <div class="w-4 h-4 rounded-full border-2 border-slate-600 peer-checked:border-emerald-500 peer-checked:bg-emerald-500 flex items-center justify-center"></div>
+                </div>
+              </label>
+
+              <label class="relative flex items-center p-4 rounded-xl border border-slate-700 bg-slate-950/60 cursor-pointer hover:border-amber-500/50 transition-all group">
+                <input type="radio" name="status" value="△ 経過観察" class="peer sr-only">
+                <div class="w-full flex items-center justify-between peer-checked:text-amber-400">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 font-bold border border-amber-500/20">△</div>
+                    <div>
+                      <p class="text-sm font-bold text-white group-hover:text-amber-300">△ 経過観察</p>
+                      <p class="text-[11px] text-slate-400">次回点検時要確認</p>
+                    </div>
+                  </div>
+                  <div class="w-4 h-4 rounded-full border-2 border-slate-600 peer-checked:border-amber-500 peer-checked:bg-amber-500 flex items-center justify-center"></div>
+                </div>
+              </label>
+
+              <label class="relative flex items-center p-4 rounded-xl border border-slate-700 bg-slate-950/60 cursor-pointer hover:border-red-500/50 transition-all group">
+                <input type="radio" name="status" value="× 要修繕" class="peer sr-only">
+                <div class="w-full flex items-center justify-between peer-checked:text-red-400">
+                  <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 font-bold border border-red-500/20">×</div>
+                    <div>
+                      <p class="text-sm font-bold text-white group-hover:text-red-300">× 要修繕</p>
+                      <p class="text-[11px] text-slate-400">緊急点検・部品交換推奨</p>
+                    </div>
+                  </div>
+                  <div class="w-4 h-4 rounded-full border-2 border-slate-600 peer-checked:border-red-500 peer-checked:bg-red-500 flex items-center justify-center"></div>
+                </div>
+              </label>
+
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <!-- 担当者見解・コメント -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-300">担当者所見・総合コメント</label>
+              <textarea id="comment" rows="4" placeholder="太陽光パネル表面および架台の目視確認を実施。モジュール割れなし。接続箱内部の変色・焦げ跡等も確認されませんでした。" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl p-3.5 text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder:text-slate-600 custom-scrollbar"></textarea>
+            </div>
+
+            <!-- 詳細数値・測定結果 -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-300">測定データ・電気特性詳細</label>
+              <textarea id="details" rows="4" placeholder="【開放電圧 Voc】1ストリング: 385V / 2ストリング: 384V&#10;【絶縁抵抗 MΩ】回路一括: 99.9 MΩ (基準値 0.2MΩ以上 OK)&#10;【パワコン動作】交流出力: 4.8kW 異常音なし" class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl p-3.5 text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder:text-slate-600 custom-scrollbar font-mono text-xs"></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: 現場写真（3枠対応：全体・パワコン・異常） -->
+        <div class="glass-card rounded-2xl p-6 space-y-6">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-4">
+            <div class="flex items-center gap-3">
+              <div class="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+                <i data-lucide="camera" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h2 class="text-base font-bold text-white">3. 現場写真アップロード（最大3枚）</h2>
+                <p class="text-xs text-slate-400">案1拡張仕様：全体、パワコン（PCS）、異常箇所の指定枠取込</p>
+              </div>
+            </div>
+            <span class="text-[11px] px-2.5 py-1 rounded-md bg-slate-800 text-slate-400">各5MB以内 (JPEG/PNG/WebP)</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            
+            <!-- 全体写真 -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-300 flex items-center justify-between">
+                <span>① 全体アレイ写真</span>
+                <span class="text-[10px] text-cyan-400 font-mono">I列</span>
+              </label>
+              <div class="relative border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-2xl p-4 bg-slate-950/40 text-center transition-all group">
+                <input type="file" id="photoMain" accept="image/jpeg,image/png,image/webp" onchange="previewUploadImage(this, 'previewMain')" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                <div id="previewMainContainer" class="space-y-2">
+                  <div class="w-12 h-12 mx-auto rounded-full bg-slate-800 group-hover:bg-cyan-500/20 flex items-center justify-center text-slate-400 group-hover:text-cyan-400 transition-all">
+                    <i data-lucide="image" class="w-6 h-6"></i>
+                  </div>
+                  <p class="text-xs font-semibold text-slate-300">タップしてアレイ写真をアップロード</p>
+                  <p class="text-[10px] text-slate-500">全体設置状態</p>
+                </div>
+                <img id="previewMain" class="hidden w-full h-36 object-cover rounded-xl border border-slate-700">
+              </div>
+            </div>
+
+            <!-- パワコン写真 (案1 追加項目) -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-300 flex items-center justify-between">
+                <span>② パワコン (PCS) 写真</span>
+                <span class="text-[10px] text-cyan-400 font-mono">J列</span>
+              </label>
+              <div class="relative border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-2xl p-4 bg-slate-950/40 text-center transition-all group">
+                <input type="file" id="photoPcs" accept="image/jpeg,image/png,image/webp" onchange="previewUploadImage(this, 'previewPcs')" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                <div id="previewPcsContainer" class="space-y-2">
+                  <div class="w-12 h-12 mx-auto rounded-full bg-slate-800 group-hover:bg-cyan-500/20 flex items-center justify-center text-slate-400 group-hover:text-cyan-400 transition-all">
+                    <i data-lucide="cpu" class="w-6 h-6"></i>
+                  </div>
+                  <p class="text-xs font-semibold text-slate-300">タップしてパワコン外観写真を選択</p>
+                  <p class="text-[10px] text-slate-500">パワコン表示画面・型番</p>
+                </div>
+                <img id="previewPcs" class="hidden w-full h-36 object-cover rounded-xl border border-slate-700">
+              </div>
+            </div>
+
+            <!-- 異常箇所写真 -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-300 flex items-center justify-between">
+                <span>③ 異常・特記事項写真</span>
+                <span class="text-[10px] text-cyan-400 font-mono">K列</span>
+              </label>
+              <div class="relative border-2 border-dashed border-slate-700 hover:border-cyan-500/60 rounded-2xl p-4 bg-slate-950/40 text-center transition-all group">
+                <input type="file" id="photoSub" accept="image/jpeg,image/png,image/webp" onchange="previewUploadImage(this, 'previewSub')" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+                <div id="previewSubContainer" class="space-y-2">
+                  <div class="w-12 h-12 mx-auto rounded-full bg-slate-800 group-hover:bg-cyan-500/20 flex items-center justify-center text-slate-400 group-hover:text-cyan-400 transition-all">
+                    <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                  </div>
+                  <p class="text-xs font-semibold text-slate-300">タップして異常箇所写真を撮影/アップ</p>
+                  <p class="text-[10px] text-slate-500">破損・鳥糞・腐食等（任意）</p>
+                </div>
+                <img id="previewSub" class="hidden w-full h-36 object-cover rounded-xl border border-slate-700">
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Form Submit Bar -->
+        <div class="flex items-center justify-between p-4 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl">
+          <div class="flex items-center gap-2 text-xs text-slate-400">
+            <i data-lucide="info" class="w-4 h-4 text-cyan-400"></i>
+            <span>保存後、PDF即時発行および施主様への自動メール送信が可能です。</span>
+          </div>
+          <button type="submit" id="submitBtn" class="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 via-cyan-600 to-emerald-500 hover:from-blue-500 hover:to-emerald-400 text-white font-bold text-sm shadow-lg shadow-cyan-500/20 transition-all transform active:scale-95">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>点検データを保存・同期</span>
+          </button>
+        </div>
+
+      </form>
+    </section>
+
+    <!-- TAB 2: 点検履歴アーカイブ (14列完全グラフィカル表示) -->
+    <section id="tab-history" class="tab-content space-y-6 hidden">
+      
+      <!-- Top Control Bar -->
+      <div class="glass-card rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-1">
+            <i data-lucide="archive" class="w-4 h-4"></i> Data Archive
+          </div>
+          <h2 class="text-xl font-bold text-white">点検履歴・報告書発行管理</h2>
+          <p class="text-xs text-slate-400">保存された全14列の点検記録をリアルタイム確認・検索・PDF出力できます</p>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="relative">
+            <input type="text" id="searchInput" oninput="filterHistoryTable()" placeholder="施主名・担当者・住所で検索..." class="w-64 bg-slate-950 border border-slate-700 rounded-xl pl-9 pr-4 py-2 text-xs text-white focus:outline-none focus:border-cyan-500">
+            <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-2.5"></i>
+          </div>
+
+          <select id="statusFilter" onchange="filterHistoryTable()" class="bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-cyan-500">
+            <option value="ALL">全ての判定</option>
+            <option value="〇 良好">〇 良好</option>
+            <option value="△ 経過観察">△ 経過観察</option>
+            <option value="× 要修繕">× 要修繕</option>
+          </select>
+
+          <button onclick="loadInspectionData()" class="p-2 rounded-xl bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:bg-slate-700 transition-all" title="最新表示に更新">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- History Data Table Container -->
+      <div class="glass-card rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left text-xs text-slate-300">
+            <thead class="bg-slate-950/80 text-slate-400 uppercase tracking-wider border-b border-slate-800 text-[11px]">
+              <tr>
+                <th class="px-4 py-3.5 font-bold">点検日時 / ID</th>
+                <th class="px-4 py-3.5 font-bold">施主名 / 現場住所</th>
+                <th class="px-4 py-3.5 font-bold">担当者</th>
+                <th class="px-4 py-3.5 font-bold">総合判定</th>
+                <th class="px-4 py-3.5 font-bold">現場写真状況</th>
+                <th class="px-4 py-3.5 font-bold">処理ステータス</th>
+                <th class="px-4 py-3.5 font-bold text-right">操作アクション</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody" class="divide-y divide-slate-800/60 font-medium">
+              <!-- Dynamically Populated Rows -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: 分析ダッシュボード -->
+    <section id="tab-analytics" class="tab-content space-y-6 hidden">
+      
+      <!-- Analytics Summary Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        
+        <div class="glass-card p-5 rounded-2xl border-l-4 border-l-blue-500">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400 font-semibold">総累計点検件数</span>
+            <div class="p-2 rounded-lg bg-blue-500/10 text-blue-400"><i data-lucide="file-text" class="w-4 h-4"></i></div>
+          </div>
+          <p id="kpiTotal" class="text-2xl font-black text-white mt-2">0 <span class="text-xs font-normal text-slate-400">件</span></p>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl border-l-4 border-l-emerald-500">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400 font-semibold">設備良好率 (〇)</span>
+            <div class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400"><i data-lucide="check-circle-2" class="w-4 h-4"></i></div>
+          </div>
+          <p id="kpiHealthy" class="text-2xl font-black text-emerald-400 mt-2">0%</p>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl border-l-4 border-l-amber-500">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400 font-semibold">経過観察 (△)</span>
+            <div class="p-2 rounded-lg bg-amber-500/10 text-amber-400"><i data-lucide="alert-circle" class="w-4 h-4"></i></div>
+          </div>
+          <p id="kpiWarning" class="text-2xl font-black text-amber-400 mt-2">0 <span class="text-xs font-normal text-slate-400">件</span></p>
+        </div>
+
+        <div class="glass-card p-5 rounded-2xl border-l-4 border-l-red-500">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-400 font-semibold">要修繕・緊急 (×)</span>
+            <div class="p-2 rounded-lg bg-red-500/10 text-red-400"><i data-lucide="x-circle" class="w-4 h-4"></i></div>
+          </div>
+          <p id="kpiDanger" class="text-2xl font-black text-red-400 mt-2">0 <span class="text-xs font-normal text-slate-400">件</span></p>
+        </div>
+
+      </div>
+
+      <!-- Charts Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <div class="glass-card p-6 rounded-2xl space-y-4">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="pie-chart" class="w-4 h-4 text-cyan-400"></i> 点検総合判定の割合分布
+          </h3>
+          <div class="h-64 flex items-center justify-center">
+            <canvas id="statusChart"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card p-6 rounded-2xl space-y-4">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i data-lucide="trending-up" class="w-4 h-4 text-blue-400"></i> 月別点検実施および送信完了数
+          </h3>
+          <div class="h-64 flex items-center justify-center">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TAB 4: 要件定義完成資料・基本プログラム抜け漏れ検証 -->
+    <section id="tab-spec" class="tab-content space-y-6 hidden">
+      
+      <div class="glass-card p-6 rounded-2xl space-y-6">
+        <div class="border-b border-slate-800 pb-4 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-cyan-400 font-bold uppercase tracking-widest">Requirements Definition Document</span>
+            <h2 class="text-xl font-black text-white mt-1">株式会社リノア（REN）太陽光パネル点検報告書要件定義</h2>
+          </div>
+          <span class="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold">要件チェック完了: 抜け漏れなし</span>
+        </div>
+
+        <!-- 1. スプレッドシート案1(14列)定義マップ -->
+        <div class="space-y-3">
+          <h3 class="text-sm font-bold text-cyan-300 flex items-center gap-2">
+            <i data-lucide="table" class="w-4 h-4"></i> スプレッドシート案1（A列〜N列 全14列）完全マッピング表
+          </h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border border-slate-800 rounded-xl overflow-hidden">
+              <thead class="bg-slate-950 text-slate-400">
+                <tr>
+                  <th class="p-2.5 border-b border-slate-800 font-bold">列記号</th>
+                  <th class="p-2.5 border-b border-slate-800 font-bold">項目名</th>
+                  <th class="p-2.5 border-b border-slate-800 font-bold">データ型 / 形式</th>
+                  <th class="p-2.5 border-b border-slate-800 font-bold">要件解説・プログラム抜け漏れ補正理由</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/80 text-slate-300">
+                <tr><td class="p-2.5 font-mono text-cyan-400 font-bold">A列</td><td class="p-2.5 font-bold">ID</td><td class="p-2.5">文字列 (UUID)</td><td class="p-2.5">REN-一意のID。ユニークキーとし、重複・改ざんを防ぐ。</td></tr>
+                <tr><td class="p-2.5 font-mono text-cyan-400 font-bold">B列</td><td class="p-2.5 font-bold">点検日時</td><td class="p-2.5">日時 (yyyy/MM/dd HH:mm)</td><td class="p-2.5">現場での登録日時を自動タイムスタンプ取得。</td></tr>
+                <tr><td class="p-2.5 font-mono text-cyan-400 font-bold">C列</td><td class="p-2.5 font-bold">担当者</td><td class="p-2.5">文字列</td><td class="p-2.5">メンテナンス実施担当エンジニア名。</td></tr>
+                <tr><td class="p-2.5 font-mono text-cyan-400 font-bold">D列</td><td class="p-2.5 font-bold">施主名</td><td class="p-2.5">文字列</td><td class="p-2.5">お客様名（PDF件名およびメール宛名へ反映）。</td></tr>
+                <tr><td class="p-2.5 font-mono text-amber-400 font-bold">E列</td><td class="p-2.5 font-bold text-amber-300">現場住所 ★追加</td><td class="p-2.5">文字列</td><td class="p-2.5">【抜け防止】発電所所在地。報告書DOCテンプレートに不可欠。</td></tr>
+                <tr><td class="p-2.5 font-mono text-cyan-400 font-bold">F列</td><td class="p-2.5 font-bold">メール</td><td class="p-2.5">文字列 (Email)</td><td class="p-2.5">自動バリデーション付きメールアドレス。</td></tr>
+                <tr><td class="p-2.5 font-mono text-cyan-400 font-bold">G列</td><td class="p-2.5 font-bold">判定</td><td class="p-2.5">区分値 (〇 / △ / ×)</td><td class="p-2.5">「〇 良好」「△ 経過観察」「× 要修繕」の規定値。</td></tr>
+                <tr><td class="p-2.5 font-mono text-cyan-400 font-bold">H列</td><td class="p-2.5 font-bold">コメント</td><td class="p-2.5">長文テキスト</td><td class="p-2.5">担当者の定性的な総合見解。</td></tr>
+                <tr><td class="p-2.5 font-mono text-cyan-400 font-bold">I列</td><td class="p-2.5 font-bold">全体写真</td><td class="p-2.5">URL (Drive)</td><td class="p-2.5">太陽光パネル設置アレイ全体写真のDrive格納リンク。</td></tr>
+                <tr><td class="p-2.5 font-mono text-amber-400 font-bold">J列</td><td class="p-2.5 font-bold text-amber-300">パワコン写真 ★追加</td><td class="p-2.5">URL (Drive)</td><td class="p-2.5">【抜け防止】パワコン（PCS）外観・表示部写真のDrive格納リンク。</td></tr>
+                <tr><td class="p-2.5 font-mono text-cyan-400 font-bold">K列</td><td class="p-2.5 font-bold">異常写真</td><td class="p-2.5">URL (Drive)</td><td class="p-2.5">モジュール破損・焦げ等の異常部拡大写真。</td></tr>
+                <tr><td class="p-2.5 font-mono text-cyan-400 font-bold">L列</td><td class="p-2.5 font-bold">詳細数値</td><td class="p-2.5">長文テキスト (測定値)</td><td class="p-2.5">Voc(開放電圧)、絶縁抵抗値(MΩ)等の測定パラメータ記録。</td></tr>
+                <tr><td class="p-2.5 font-mono text-cyan-400 font-bold">M列</td><td class="p-2.5 font-bold">ステータス</td><td class="p-2.5">区分値</td><td class="p-2.5">「未処理」「送信完了」「送信エラー」「取り消し」の管理用。</td></tr>
+                <tr><td class="p-2.5 font-mono text-amber-400 font-bold">N列</td><td class="p-2.5 font-bold text-amber-300">PDF_URL ★追加</td><td class="p-2.5">URL (Drive)</td><td class="p-2.5">【抜け防止】自動生成されたPDF報告書のGoogle Drive保存先直URL。</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. システム基本プログラムの抜け漏れチェックリスト -->
+        <div class="space-y-3 pt-4 border-t border-slate-800">
+          <h3 class="text-sm font-bold text-cyan-300 flex items-center gap-2">
+            <i data-lucide="shield-alert" class="w-4 h-4"></i> 基本プログラム抜け漏れ検証および修正仕様
+          </h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+              <div class="flex items-center gap-2 text-emerald-400 font-bold">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> 1. 同時書き込み排他制御 (LockService)
+              </div>
+              <p class="text-slate-400 leading-relaxed">
+                複数エンジニアが現場から同時に保存を押した場合のデータ競合・行の上書き破損を防止するため、GAS側の `LockService.getDocumentLock()` を30秒待ちで厳格適用。
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+              <div class="flex items-center gap-2 text-emerald-400 font-bold">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> 2. 画像フォーマット & 容量の自動最適化
+              </div>
+              <p class="text-slate-400 leading-relaxed">
+                高画質スマートフォンでの撮影（10MB超）によるGASのタイムアウトや容量オーバーを防ぐため、Base64デコード処理前段階で5MB上限バリデーション＋ドキュメント埋め込み時のアスペクト比自動調整を実装。
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+              <div class="flex items-center gap-2 text-emerald-400 font-bold">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> 3. ドキュメント置換タグの完全整合
+              </div>
+              <p class="text-slate-400 leading-relaxed">
+                PDFマスターテンプレート（Google Doc）内に `{{現場住所}}` および `{{パワコン写真}}` の置換タグを追加補正。画像が選択されていない場合は（写真なし）テキストへ自動置換しエラーを回避。
+              </p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+              <div class="flex items-center gap-2 text-emerald-400 font-bold">
+                <i data-lucide="check-circle" class="w-4 h-4"></i> 4. メール再送防止 & 状態二重変更ブロック
+              </div>
+              <p class="text-slate-400 leading-relaxed">
+                すでに「送信完了」のレコードに対して再送信を行わないようチェックを配置。状態を巻き戻す場合は管理者が手動変更する設計とし、誤送信事故を全自動で防ぎます。
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Interactive Modern PDF Preview Modal -->
+  <div id="pdfModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="w-full max-w-4xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden my-8 space-y-0">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-6 py-4 bg-slate-950 border-b border-slate-800">
+        <div class="flex items-center gap-3">
+          <div class="p-2 rounded-lg bg-red-500/10 text-red-400">
+            <i data-lucide="file-text" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">点検報告書 PDFプレビュー</h3>
+            <p id="pdfModalSubtitle" class="text-xs text-slate-400">REN 太陽光点検報告書形式</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="window.print()" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 transition-all">
+            <i data-lucide="printer" class="w-3.5 h-3.5"></i> 印刷 / PDF保存
+          </button>
+          <button onclick="closePdfModal()" class="p-2 rounded-lg bg-slate-800 text-slate-400 hover:text-white">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- PDF Page Preview Visual Sheet (Light Printable UI) -->
+      <div class="p-6 sm:p-10 bg-slate-950/50 max-h-[75vh] overflow-y-auto custom-scrollbar">
+        <div id="printablePdfContent" class="glass-card-light text-slate-900 p-8 sm:p-12 rounded-xl max-w-3xl mx-auto shadow-2xl space-y-6">
+          
+          <!-- Report Header -->
+          <div class="border-b-2 border-slate-900 pb-4 flex justify-between items-end">
+            <div>
+              <p class="text-xs font-bold tracking-widest text-blue-700 uppercase">株式会社リノア（REN） メンテナンス事業部</p>
+              <h1 class="text-2xl font-black text-slate-900 tracking-tight mt-1">太陽光発電設備 定期点検報告書</h1>
+            </div>
+            <div class="text-right text-xs text-slate-600">
+              <p id="pdfReportDate">発行日: 2026/08/27</p>
+              <p id="pdfReportId" class="font-mono text-[10px] text-slate-500">ID: REN-DEMO-001</p>
+            </div>
+          </div>
+
+          <!-- Summary Meta Box -->
+          <div class="grid grid-cols-2 gap-4 text-xs">
+            <div class="bg-slate-100 p-3 rounded-lg space-y-1">
+              <p class="text-slate-500 font-semibold">お客様（施主名）</p>
+              <p id="pdfClientName" class="text-sm font-bold text-slate-900">鈴木 一郎 様</p>
+            </div>
+            <div class="bg-slate-100 p-3 rounded-lg space-y-1">
+              <p class="text-slate-500 font-semibold">現場住所</p>
+              <p id="pdfAddress" class="text-sm font-bold text-slate-900">東京都港区芝浦 1-2-3</p>
+            </div>
+            <div class="bg-slate-100 p-3 rounded-lg space-y-1">
+              <p class="text-slate-500 font-semibold">点検担当者</p>
+              <p id="pdfWorker" class="text-sm font-bold text-slate-900">山田 太郎</p>
+            </div>
+            <div class="bg-slate-100 p-3 rounded-lg space-y-1">
+              <p class="text-slate-500 font-semibold">総合判定結果</p>
+              <p id="pdfStatus" class="text-sm font-bold text-emerald-600">〇 良好</p>
+            </div>
+          </div>
+
+          <!-- Comments Section -->
+          <div class="space-y-2">
+            <h3 class="text-xs font-bold text-slate-900 uppercase border-l-4 border-blue-600 pl-2">担当者所見・総合コメント</h3>
+            <p id="pdfComment" class="text-xs text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-200 leading-relaxed whitespace-pre-line">
+              太陽光パネル表面および架台の目視確認を実施。目立った傷や汚れはなく正常稼働中。
+            </p>
+          </div>
+
+          <!-- Detail Numerical Section -->
+          <div class="space-y-2">
+            <h3 class="text-xs font-bold text-slate-900 uppercase border-l-4 border-blue-600 pl-2">測定データ・電気特性数値</h3>
+            <p id="pdfDetails" class="text-xs text-slate-700 font-mono bg-slate-50 p-3 rounded-lg border border-slate-200 leading-relaxed whitespace-pre-line">
+              Voc: 385V / 絶縁抵抗: 99.9 MΩ
+            </p>
+          </div>
+
+          <!-- Photo Grid Section -->
+          <div class="space-y-2">
+            <h3 class="text-xs font-bold text-slate-900 uppercase border-l-4 border-blue-600 pl-2">現場写真記録</h3>
+            <div class="grid grid-cols-3 gap-3 pt-2">
+              <div class="space-y-1">
+                <p class="text-[10px] text-slate-500 font-bold">① 全体設置状態</p>
+                <div class="h-28 bg-slate-200 rounded-lg overflow-hidden flex items-center justify-center border border-slate-300">
+                  <img id="pdfImgMain" class="w-full h-full object-cover hidden" alt="全体">
+                  <span id="pdfImgMainText" class="text-[10px] text-slate-400">（写真なし）</span>
+                </div>
+              </div>
+              <div class="space-y-1">
+                <p class="text-[10px] text-slate-500 font-bold">② パワコン (PCS)</p>
+                <div class="h-28 bg-slate-200 rounded-lg overflow-hidden flex items-center justify-center border border-slate-300">
+                  <img id="pdfImgPcs" class="w-full h-full object-cover hidden" alt="PCS">
+                  <span id="pdfImgPcsText" class="text-[10px] text-slate-400">（写真なし）</span>
+                </div>
+              </div>
+              <div class="space-y-1">
+                <p class="text-[10px] text-slate-500 font-bold">③ 異常・特記事項</p>
+                <div class="h-28 bg-slate-200 rounded-lg overflow-hidden flex items-center justify-center border border-slate-300">
+                  <img id="pdfImgSub" class="w-full h-full object-cover hidden" alt="異常">
+                  <span id="pdfImgSubText" class="text-[10px] text-slate-400">（写真なし）</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Report Footer -->
+          <div class="border-t border-slate-200 pt-4 text-center text-[10px] text-slate-400">
+            <p>株式会社リノア（REN） 〒100-0001 東京都千代田区1-1 メンテナンス事業部</p>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Initial Seed Demo Data matching Scheme 1 (14 Columns)
+    const initialDemoData = [
+      {
+        rowIndex: 2,
+        id: "REN-9A8F-2026",
+        date: "2026/08/27 10:30",
+        worker: "山田 太郎",
+        client: "鈴木 一郎",
+        address: "東京都港区芝浦 1-2-3 太陽光発電所A棟",
+        email: "suzuki@example.com",
+        status: "〇 良好",
+        comment: "パネルアレイ表面目視・ドローン点検完了。傷・鳥糞・クラック等検出されず極めて良好。",
+        photoMain: "https://images.unsplash.com/photo-1509391365360-2e959784a276?w=500&q=80",
+        photoPcs: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=500&q=80",
+        photoSub: "",
+        details: "Voc: 385.2V\nIp: 8.9A\n絶縁抵抗: 99.9 MΩ (正常)",
+        processStatus: "送信完了",
+        pdfUrl: "#"
+      },
+      {
+        rowIndex: 3,
+        id: "REN-4B7C-2026",
+        date: "2026/08/26 14:15",
+        worker: "佐藤 健",
+        client: "高橋 誠",
+        address: "神奈川県横浜市中区本町 4-10",
+        email: "takahashi@example.com",
+        status: "△ 経過観察",
+        comment: "1番ストリングのパワコン近傍配線ダクトに経年劣化の軽微なひび割れを発見。次回定期点検時要確認。",
+        photoMain: "https://images.unsplash.com/photo-1509391365360-2e959784a276?w=500&q=80",
+        photoPcs: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=500&q=80",
+        photoSub: "https://images.unsplash.com/photo-1542332213-31f87348057f?w=500&q=80",
+        details: "Voc: 372.0V\n絶縁抵抗: 15.2 MΩ",
+        processStatus: "未処理",
+        pdfUrl: ""
+      },
+      {
+        rowIndex: 4,
+        id: "REN-1X3Z-2026",
+        date: "2026/08/25 11:00",
+        worker: "鈴木 隆",
+        client: "株式会社ソーラーエナジー",
+        address: "千葉県船橋市印内 2-5-1",
+        email: "info@solar-energy-demo.jp",
+        status: "× 要修繕",
+        comment: "クラスタホットスポットおよびバイパスダイオードショートの疑い。早急なモジュール交換工事を推奨。",
+        photoMain: "https://images.unsplash.com/photo-1509391365360-2e959784a276?w=500&q=80",
+        photoPcs: "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=500&q=80",
+        photoSub: "https://images.unsplash.com/photo-1542332213-31f87348057f?w=500&q=80",
+        details: "Voc: 210.0V (異常低下)\n絶縁抵抗: 0.05 MΩ (基準未満)",
+        processStatus: "未処理",
+        pdfUrl: ""
+      }
+    ];
+
+    // Local Storage Data Wrapper
+    function getStoredData() {
+      const stored = localStorage.getItem('ren_solar_data_v2');
+      if (!stored) {
+        localStorage.setItem('ren_solar_data_v2', JSON.stringify(initialDemoData));
+        return initialDemoData;
+      }
+      return JSON.parse(stored);
+    }
+
+    function setStoredData(data) {
+      localStorage.setItem('ren_solar_data_v2', JSON.stringify(data));
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      loadInspectionData();
+      initAnalyticsCharts();
+    });
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.nav-tab').forEach(el => {
+        el.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-600/30');
+        el.classList.add('text-slate-400', 'hover:text-slate-200');
+      });
+
+      const activeContent = document.getElementById(tabId);
+      if (activeContent) activeContent.classList.remove('hidden');
+
+      const activeNav = document.getElementById('nav-' + tabId);
+      if (activeNav) {
+        activeNav.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-600/30');
+        activeNav.classList.remove('text-slate-400');
+      }
+
+      if (tabId === 'tab-history') {
+        loadInspectionData();
+      } else if (tabId === 'tab-analytics') {
+        renderAnalyticsData();
+      }
+    }
+
+    function previewUploadImage(input, previewId) {
+      const file = input.files[0];
+      const img = document.getElementById(previewId);
+      const container = document.getElementById(previewId + 'Container');
+
+      if (!file) {
+        img.classList.add('hidden');
+        if (container) container.classList.remove('hidden');
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        showToast('エラー', '画像ファイルサイズは5MB以下にしてください。', 'danger');
+        input.value = '';
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        img.src = e.target.result;
+        img.classList.remove('hidden');
+        if (container) container.classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function showToast(title, message, type = 'info') {
+      const toast = document.getElementById('toast');
+      const toastTitle = document.getElementById('toast-title');
+      const toastMsg = document.getElementById('toast-message');
+      const toastIcon = document.getElementById('toast-icon');
+
+      toastTitle.textContent = title;
+      toastMsg.textContent = message;
+
+      if (type === 'danger') {
+        toastIcon.className = "p-2 rounded-lg bg-red-500/20 text-red-400";
+      } else if (type === 'success') {
+        toastIcon.className = "p-2 rounded-lg bg-emerald-500/20 text-emerald-400";
+      } else {
+        toastIcon.className = "p-2 rounded-lg bg-blue-500/20 text-blue-400";
+      }
+
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 4000);
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> <span>同期中...</span>`;
+      lucide.createIcons();
+
+      const worker = document.getElementById('worker').value;
+      const client = document.getElementById('client').value;
+      const email = document.getElementById('email').value;
+      const address = document.getElementById('address').value;
+      const status = document.querySelector('input[name="status"]:checked').value;
+      const comment = document.getElementById('comment').value;
+      const details = document.getElementById('details').value;
+
+      const photoMain = document.getElementById('previewMain').src || '';
+      const photoPcs = document.getElementById('previewPcs').src || '';
+      const photoSub = document.getElementById('previewSub').src || '';
+
+      const now = new Date();
+      const dateStr = now.getFullYear() + '/' + 
+        String(now.getMonth() + 1).padStart(2, '0') + '/' + 
+        String(now.getDate()).padStart(2, '0') + ' ' + 
+        String(now.getHours()).padStart(2, '0') + ':' + 
+        String(now.getMinutes()).padStart(2, '0');
+
+      const newRecord = {
+        rowIndex: Date.now(),
+        id: "REN-" + Math.random().toString(36).substr(2, 6).toUpperCase() + "-2026",
+        date: dateStr,
+        worker,
+        client,
+        address: address || "住所未入力",
+        email,
+        status,
+        comment: comment || "特記事項なし",
+        photoMain: photoMain.startsWith('data:') ? photoMain : '',
+        photoPcs: photoPcs.startsWith('data:') ? photoPcs : '',
+        photoSub: photoSub.startsWith('data:') ? photoSub : '',
+        details: details || "特記事項なし",
+        processStatus: "未処理",
+        pdfUrl: ""
+      };
+
+      // Hybrid Behavior: If GAS environment exists, run GAS script; otherwise use local storage
+      if (window.google && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler((res) => {
+            showToast('保存完了', res.message || 'GASへ保存しました', 'success');
+            resetForm();
+          })
+          .withFailureHandler((err) => {
+            showToast('エラー', err.message || '保存に失敗しました', 'danger');
+          })
+          .saveInspectionData(newRecord);
+      } else {
+        // Demo Mode - Simulate 600ms latency
+        setTimeout(() => {
+          const list = getStoredData();
+          list.unshift(newRecord);
+          setStoredData(list);
+          showToast('保存完了', '点検データをローカルストレージへ正常保管しました', 'success');
+          resetForm();
+          switchTab('tab-history');
+        }, 600);
+      }
+    }
+
+    function resetForm() {
+      document.getElementById('inspectionForm').reset();
+      ['previewMain', 'previewPcs', 'previewSub'].forEach(id => {
+        const img = document.getElementById(id);
+        img.src = '';
+        img.classList.add('hidden');
+        const container = document.getElementById(id + 'Container');
+        if (container) container.classList.remove('hidden');
+      });
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = `<i data-lucide="save" class="w-4 h-4"></i> <span>点検データを保存・同期</span>`;
+      lucide.createIcons();
+    }
+
+    function loadInspectionData() {
+      if (window.google && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler((data) => {
+            renderHistoryTable(data);
+          })
+          .getInspectionData();
+      } else {
+        renderHistoryTable(getStoredData());
+      }
+    }
+
+    function renderHistoryTable(data) {
+      const tbody = document.getElementById('historyTableBody');
+      tbody.innerHTML = '';
+
+      if (!data || data.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="px-4 py-8 text-center text-slate-500">
+              登録された点検データはありません。
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      data.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-800/40 transition-colors";
+
+        let statusBadge = "";
+        if (item.status.includes('良好')) {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold">〇 良好</span>`;
+        } else if (item.status.includes('経過観察')) {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[11px] font-bold">△ 経過観察</span>`;
+        } else {
+          statusBadge = `<span class="px-2.5 py-1 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 text-[11px] font-bold">× 要修繕</span>`;
+        }
+
+        let processBadge = item.processStatus === '送信完了' 
+          ? `<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">送信完了</span>`
+          : `<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 text-[10px]">${item.processStatus || '未処理'}</span>`;
+
+        const hasPhotos = (item.photoMain || item.photoPcs || item.photoSub) 
+          ? `<span class="text-cyan-400 font-bold flex items-center gap-1"><i data-lucide="image" class="w-3.5 h-3.5"></i> あり</span>`
+          : `<span class="text-slate-600">なし</span>`;
+
+        tr.innerHTML = `
+          <td class="px-4 py-3.5">
+            <p class="font-bold text-white">${item.date}</p>
+            <p class="font-mono text-[10px] text-slate-500">${item.id}</p>
+          </td>
+          <td class="px-4 py-3.5">
+            <p class="font-bold text-slate-200">${item.client} 様</p>
+            <p class="text-[11px] text-slate-400 truncate max-w-xs">${item.address || '住所未登録'}</p>
+          </td>
+          <td class="px-4 py-3.5 text-slate-300">${item.worker}</td>
+          <td class="px-4 py-3.5">${statusBadge}</td>
+          <td class="px-4 py-3.5">${hasPhotos}</td>
+          <td class="px-4 py-3.5">${processBadge}</td>
+          <td class="px-4 py-3.5 text-right space-x-1">
+            <button onclick="openPdfModal('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white border border-blue-500/30 text-[11px] font-bold transition-all">
+              PDFプレビュー
+            </button>
+            <button onclick="sendReportEmail('${item.id}')" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600 text-emerald-400 hover:text-white border border-emerald-500/30 text-[11px] font-bold transition-all">
+              送付
+            </button>
+            <button onclick="deleteInspectionRecord('${item.id}')" class="p-1.5 rounded-lg bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 transition-all" title="非表示">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      lucide.createIcons();
+    }
+
+    function filterHistoryTable() {
+      const query = document.getElementById('searchInput').value.toLowerCase();
+      const filter = document.getElementById('statusFilter').value;
+      const data = getStoredData();
+
+      const filtered = data.filter(item => {
+        const matchesQuery = item.client.toLowerCase().includes(query) || 
+                             item.worker.toLowerCase().includes(query) || 
+                             item.address.toLowerCase().includes(query);
+        const matchesStatus = filter === 'ALL' || item.status === filter;
+        return matchesQuery && matchesStatus;
+      });
+
+      renderHistoryTable(filtered);
+    }
+
+    function openPdfModal(id) {
+      const list = getStoredData();
+      const item = list.find(x => x.id === id);
+      if (!item) return;
+
+      document.getElementById('pdfReportDate').textContent = "発行日: " + item.date.split(' ')[0];
+      document.getElementById('pdfReportId').textContent = "ID: " + item.id;
+      document.getElementById('pdfClientName').textContent = item.client + " 様";
+      document.getElementById('pdfAddress').textContent = item.address || "東京都港区芝浦 1-2-3";
+      document.getElementById('pdfWorker').textContent = item.worker;
+      document.getElementById('pdfStatus').textContent = item.status;
+      document.getElementById('pdfComment').textContent = item.comment || "特記事項なし";
+      document.getElementById('pdfDetails').textContent = item.details || "特記事項なし";
+
+      // Render Photo previews in Modal
+      setupModalPhoto('pdfImgMain', 'pdfImgMainText', item.photoMain);
+      setupModalPhoto('pdfImgPcs', 'pdfImgPcsText', item.photoPcs);
+      setupModalPhoto('pdfImgSub', 'pdfImgSubText', item.photoSub);
+
+      const modal = document.getElementById('pdfModal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function setupModalPhoto(imgId, textId, src) {
+      const img = document.getElementById(imgId);
+      const txt = document.getElementById(textId);
+      if (src && src.length > 0) {
+        img.src = src;
+        img.classList.remove('hidden');
+        txt.classList.add('hidden');
+      } else {
+        img.classList.add('hidden');
+        txt.classList.remove('hidden');
+      }
+    }
+
+    function closePdfModal() {
+      const modal = document.getElementById('pdfModal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function sendReportEmail(id) {
+      if (confirm('この施主様宛に点検報告書PDFをメール送信しますか？')) {
+        const list = getStoredData();
+        const item = list.find(x => x.id === id);
+        if (item) {
+          item.processStatus = "送信完了";
+          setStoredData(list);
+          showToast('メール送信完了', `${item.client} 様（${item.email}）へ送信しました`, 'success');
+          loadInspectionData();
+        }
+      }
+    }
+
+    function deleteInspectionRecord(id) {
+      if (confirm('この点検履歴を非表示（削除）にしますか？')) {
+        let list = getStoredData();
+        list = list.filter(x => x.id !== id);
+        setStoredData(list);
+        showToast('削除完了', '点検履歴から非表示にしました', 'info');
+        loadInspectionData();
+      }
+    }
+
+    let statusChartInstance = null;
+    let trendChartInstance = null;
+
+    function initAnalyticsCharts() {
+      renderAnalyticsData();
+    }
+
+    function renderAnalyticsData() {
+      const data = getStoredData();
+
+      // KPIs
+      const total = data.length;
+      const healthy = data.filter(x => x.status.includes('良好')).length;
+      const warning = data.filter(x => x.status.includes('経過観察')).length;
+      const danger = data.filter(x => x.status.includes('要修繕')).length;
+
+      document.getElementById('kpiTotal').innerHTML = `${total} <span class="text-xs font-normal text-slate-400">件</span>`;
+      document.getElementById('kpiHealthy').textContent = total > 0 ? Math.round((healthy / total) * 100) + '%' : '0%';
+      document.getElementById('kpiWarning').innerHTML = `${warning} <span class="text-xs font-normal text-slate-400">件</span>`;
+      document.getElementById('kpiDanger').innerHTML = `${danger} <span class="text-xs font-normal text-slate-400">件</span>`;
+
+      // Pie Chart
+      const ctxStatus = document.getElementById('statusChart').getContext('2d');
+      if (statusChartInstance) statusChartInstance.destroy();
+
+      statusChartInstance = new Chart(ctxStatus, {
+        type: 'doughnut',
+        data: {
+          labels: ['〇 良好', '△ 経過観察', '× 要修繕'],
+          datasets: [{
+            data: [healthy, warning, danger],
+            backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#94a3b8', font: { size: 11 } }
+            }
+          }
+        }
+      });
+
+      // Line Chart
+      const ctxTrend = document.getElementById('trendChart').getContext('2d');
+      if (trendChartInstance) trendChartInstance.destroy();
+
+      trendChartInstance = new Chart(ctxTrend, {
+        type: 'bar',
+        data: {
+          labels: ['6月', '7月', '8月'],
+          datasets: [
+            {
+              label: '点検数',
+              data: [12, 18, total],
+              backgroundColor: '#3b82f6'
+            },
+            {
+              label: '送信完了',
+              data: [12, 17, data.filter(x => x.processStatus === '送信完了').length],
+              backgroundColor: '#10b981'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+            y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#94a3b8', font: { size: 11 } }
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

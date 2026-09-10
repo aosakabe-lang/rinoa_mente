@@ -4,7 +4,7 @@
   <base target="_top">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>REN | 太陽光発電設備 点検報告システム</title>
+  <title>REN | 太陽光発電設備 点検報告システム v3.2</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -12,16 +12,13 @@
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
     body { font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif; background: #eef2f6; color: #172033; }
     .glass-card { background: #ffffff; border: 1px solid #d8dee8; border-radius: 8px !important; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05); }
-    .glass-card-light { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); }
-    .office-table th { background: #f4f6f8; color: #526174; }
-    .glass-card h1, .glass-card h2, .glass-card h3 { color: #172033 !important; }
-    input:not([type="radio"]):not([type="file"]), textarea, select { background: #ffffff !important; color: #172033 !important; border-color: #cbd5e1 !important; }
     .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.8); border-radius: 99px; }
   </style>
 </head>
-<body class="h-full text-slate-800 bg-slate-100 antialiased selection:bg-blue-200 selection:text-slate-900 flex flex-col">
+<body class="h-full text-slate-800 bg-slate-100 antialiased custom-scrollbar flex flex-col">
 
+  <!-- ヘッダーナビゲーション -->
   <header class="no-print sticky top-0 z-40 border-b border-slate-300 bg-white">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
@@ -32,7 +29,7 @@
           <div>
             <div class="flex items-center gap-2">
               <span class="font-extrabold tracking-wider text-slate-900 text-base">REN</span>
-              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-500">MAINTENANCE</span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-500">MAINTENANCE v3.2</span>
             </div>
             <p class="text-[11px] text-slate-500 font-medium">株式会社リノア / 太陽光発電点検管理</p>
           </div>
@@ -51,58 +48,107 @@
   </header>
 
   <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
-    <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 text-white shadow-2xl">
+    <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 text-white shadow-2xl">
       <div id="toast-icon" class="p-2 rounded-lg bg-blue-500/20 text-blue-400"><i data-lucide="info" class="w-5 h-5"></i></div>
       <div><p id="toast-title" class="text-xs font-bold">通知</p><p id="toast-message" class="text-xs text-slate-300">処理を更新しました</p></div>
     </div>
   </div>
 
+  <!-- メインコンテンツ -->
   <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
     <!-- TAB 1: 入力画面 -->
     <section id="tab-input" class="tab-content space-y-6">
       <form id="inspectionForm" onsubmit="handleFormSubmit(event)" class="space-y-6">
-        <div class="glass-card rounded-2xl p-6 space-y-6">
-          <h2 class="text-base font-bold text-slate-900">1. 基本情報・施主様連絡先</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div><label class="block text-xs font-bold text-slate-700">作業担当者名 *</label><input type="text" id="worker" required placeholder="例：山田 太郎" class="w-full rounded-xl px-4 py-2.5 text-sm"></div>
-            <div><label class="block text-xs font-bold text-slate-700">施主様名 *</label><input type="text" id="client" required placeholder="例：鈴木 一郎" class="w-full rounded-xl px-4 py-2.5 text-sm"></div>
-            <div><label class="block text-xs font-bold text-slate-700">メールアドレス *</label><input type="email" id="email" required placeholder="example@ren-solar.jp" class="w-full rounded-xl px-4 py-2.5 text-sm"></div>
-            <div class="md:col-span-3"><label class="block text-xs font-bold text-slate-700">現場住所</label><input type="text" id="address" placeholder="例：東京都港区芝浦 1-2-3" class="w-full rounded-xl px-4 py-2.5 text-sm"></div>
+        
+        <!-- 1. 基本情報・施主情報 -->
+        <div class="glass-card rounded-2xl p-6 space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="user" class="w-5 h-5 text-blue-600"></i> 1. 基本情報・施主様情報
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div><label class="block text-xs font-bold text-slate-700">作業担当者名 *</label><input type="text" id="worker" required placeholder="例：山田 太郎" class="w-full rounded-lg border p-2.5 text-sm"></div>
+            <div><label class="block text-xs font-bold text-slate-700">施主様名 *</label><input type="text" id="client" required placeholder="例：鈴木 一郎" class="w-full rounded-lg border p-2.5 text-sm"></div>
+            <div><label class="block text-xs font-bold text-slate-700">メールアドレス *</label><input type="email" id="email" required placeholder="example@ren-solar.jp" class="w-full rounded-lg border p-2.5 text-sm"></div>
+            <div class="md:col-span-3"><label class="block text-xs font-bold text-slate-700">現場住所</label><input type="text" id="address" placeholder="例：東京都港区芝浦 1-2-3" class="w-full rounded-lg border p-2.5 text-sm"></div>
           </div>
         </div>
 
-        <div class="glass-card rounded-2xl p-6 space-y-6">
-          <h2 class="text-base font-bold text-slate-900">2. 点検判定・所見</h2>
-          <div class="space-y-2">
-            <label class="block text-xs font-bold text-slate-700">総合判定</label>
-            <div class="grid grid-cols-3 gap-4">
+        <!-- 2. 発電所情報 & 気象条件（v3.2追加） -->
+        <div class="glass-card rounded-2xl p-6 space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="zap" class="w-5 h-5 text-amber-500"></i> 2. 発電所メタ情報 & 環境気象
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div><label class="block text-xs font-bold text-slate-700">発電所名</label><input type="text" id="plantName" placeholder="例：つくば第一発電所" class="w-full rounded-lg border p-2 text-xs"></div>
+            <div><label class="block text-xs font-bold text-slate-700">電気主任技術者</label><input type="text" id="chiefEngineer" placeholder="例：佐藤 技術士" class="w-full rounded-lg border p-2 text-xs"></div>
+            <div><label class="block text-xs font-bold text-slate-700">電力会社</label><input type="text" id="powerCompany" placeholder="例：東京電力" class="w-full rounded-lg border p-2 text-xs"></div>
+            <div><label class="block text-xs font-bold text-slate-700">最大出力 / 定格出力 (kW)</label>
+              <div class="flex gap-1"><input type="text" id="maxOutput" placeholder="最大" class="w-1/2 border rounded p-2 text-xs"><input type="text" id="ratedOutput" placeholder="定格" class="w-1/2 border rounded p-2 text-xs"></div>
+            </div>
+            <div><label class="block text-xs font-bold text-slate-700">天気</label><input type="text" id="weather" placeholder="例：晴れ" class="w-full rounded-lg border p-2 text-xs"></div>
+            <div><label class="block text-xs font-bold text-slate-700">室温(℃) / 外気温(℃)</label>
+              <div class="flex gap-1"><input type="text" id="indoorTemp" placeholder="室内" class="w-1/2 border rounded p-2 text-xs"><input type="text" id="outdoorTemp" placeholder="外気" class="w-1/2 border rounded p-2 text-xs"></div>
+            </div>
+            <div><label class="block text-xs font-bold text-slate-700">室内湿度(%) / 外気湿度(%)</label>
+              <div class="flex gap-1"><input type="text" id="indoorHumidity" placeholder="室内%" class="w-1/2 border rounded p-2 text-xs"><input type="text" id="outdoorHumidity" placeholder="外気%" class="w-1/2 border rounded p-2 text-xs"></div>
+            </div>
+            <div><label class="block text-xs font-bold text-slate-700">平均日射量 (kW/m²)</label><input type="text" id="solarRadiation" placeholder="例：3.85" class="w-full rounded-lg border p-2 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- 3. ★新機能★ PCS（パワコン）点検測定データ（動的追加対応） -->
+        <div class="glass-card rounded-2xl p-6 space-y-4">
+          <div class="flex items-center justify-between border-b pb-3">
+            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="cpu" class="w-5 h-5 text-emerald-600"></i> 3. PCS（パワコン）点検測定データ
+            </h2>
+            <button type="button" onclick="addPcsRow()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1">
+              <i data-lucide="plus" class="w-4 h-4"></i> PCS (パワコン) を追加
+            </button>
+          </div>
+          <div id="pcsContainer" class="space-y-4">
+            <!-- JavaScriptで動的生成（初期1件表示） -->
+          </div>
+        </div>
+
+        <!-- 4. 総合判定・所見 -->
+        <div class="glass-card rounded-2xl p-6 space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="clipboard-check" class="w-5 h-5 text-cyan-600"></i> 4. 総合判定・所見コメント
+          </h2>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-2">総合判定</label>
+            <div class="flex gap-4">
               <label class="flex items-center gap-2 border p-3 rounded-lg"><input type="radio" name="status" value="〇 良好" checked> 〇 良好</label>
               <label class="flex items-center gap-2 border p-3 rounded-lg"><input type="radio" name="status" value="△ 経過観察"> △ 経過観察</label>
               <label class="flex items-center gap-2 border p-3 rounded-lg"><input type="radio" name="status" value="× 要修繕"> × 要修繕</label>
             </div>
           </div>
-          <div><label class="block text-xs font-bold text-slate-700">総合コメント</label><textarea id="comment" rows="3" class="w-full rounded-xl p-3 text-sm"></textarea></div>
-          <div><label class="block text-xs font-bold text-slate-700">詳細数値データ</label><textarea id="details" rows="3" class="w-full rounded-xl p-3 text-sm font-mono"></textarea></div>
+          <div><label class="block text-xs font-bold text-slate-700">担当者所見・総合コメント</label><textarea id="comment" rows="3" class="w-full rounded-lg border p-3 text-sm"></textarea></div>
+          <div><label class="block text-xs font-bold text-slate-700">詳細補足数値データ</label><textarea id="details" rows="2" class="w-full rounded-lg border p-3 text-xs font-mono"></textarea></div>
         </div>
 
-        <div class="glass-card rounded-2xl p-6 space-y-6">
-          <h2 class="text-base font-bold text-slate-900">3. 現場写真撮影・追加</h2>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div><label class="block text-xs font-bold">① 全体写真</label><input type="file" id="photoMain" accept="image/*" class="text-xs"></div>
-            <div><label class="block text-xs font-bold">② パワコン写真</label><input type="file" id="photoPcs" accept="image/*" class="text-xs"></div>
-            <div><label class="block text-xs font-bold">③ 異常写真</label><input type="file" id="photoSub" accept="image/*" class="text-xs"></div>
+        <!-- 5. 現場写真 -->
+        <div class="glass-card rounded-2xl p-6 space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="camera" class="w-5 h-5 text-slate-700"></i> 5. 現場写真アップロード
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div><label class="block text-xs font-bold">① 全体写真</label><input type="file" id="photoMain" accept="image/*" class="text-xs w-full mt-1"></div>
+            <div><label class="block text-xs font-bold">② パワコン写真</label><input type="file" id="photoPcs" accept="image/*" class="text-xs w-full mt-1"></div>
+            <div><label class="block text-xs font-bold">③ 異常写真</label><input type="file" id="photoSub" accept="image/*" class="text-xs w-full mt-1"></div>
           </div>
         </div>
 
-        <button type="submit" id="submitBtn" class="px-6 py-3 rounded-lg bg-slate-800 text-white font-bold text-sm">点検データを保存・同期</button>
+        <button type="submit" id="submitBtn" class="w-full py-3 rounded-xl bg-slate-800 text-white font-bold text-sm hover:bg-slate-700">点検データを送信・保存</button>
       </form>
     </section>
 
-    <!-- TAB 2: 確認・履歴画面 -->
+    <!-- TAB 2: 点検履歴・確認モーダル -->
     <section id="tab-history" class="tab-content space-y-6 hidden">
       <div class="glass-card rounded-2xl p-6">
-        <h2 class="text-xl font-bold text-slate-900 mb-4">点検データ一覧・確認モーダル発行</h2>
+        <h2 class="text-xl font-bold text-slate-900 mb-4">点検データ一覧・確認・補正モーダル</h2>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs">
             <thead class="bg-slate-100">
@@ -128,7 +174,7 @@
   <div id="editModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md hidden items-center justify-center p-4 overflow-y-auto">
     <div class="w-full max-w-4xl bg-white border border-slate-300 rounded-2xl shadow-2xl p-6 space-y-6 my-8">
       <div class="flex items-center justify-between border-b pb-4">
-        <h3 class="text-lg font-bold text-slate-900">点検情報の確認・補正編集</h3>
+        <h3 class="text-lg font-bold text-slate-900">点検情報の確認・補正編集モーダル</h3>
         <button onclick="closeEditModal()" class="p-2 text-slate-500">✕</button>
       </div>
       <form id="editForm" onsubmit="handleEditSubmit(event)" class="space-y-4">
@@ -147,7 +193,6 @@
           </select>
         </div>
         <div><label class="block text-xs font-bold">総合コメント</label><textarea id="editComment" rows="3" class="w-full border rounded p-2 text-xs"></textarea></div>
-        <div><label class="block text-xs font-bold">詳細数値</label><textarea id="editDetails" rows="3" class="w-full border rounded p-2 text-xs font-mono"></textarea></div>
 
         <div class="border-t pt-4">
           <label class="block text-xs font-bold mb-2">写真の差し替え</label>
@@ -167,10 +212,65 @@
   </div>
 
   <script>
+    let pcsCount = 0;
+
     document.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
+      addPcsRow(); // 初期表示でPCS1を追加
       loadInspectionData();
     });
+
+    // PCS入力行の動的追加
+    function addPcsRow(data = {}) {
+      pcsCount++;
+      const container = document.getElementById('pcsContainer');
+      const card = document.createElement('div');
+      card.className = "p-4 border rounded-xl bg-slate-50 space-y-3 relative pcs-card";
+      card.id = `pcsCard_${pcsCount}`;
+
+      card.innerHTML = `
+        <div class="flex justify-between items-center border-b pb-2">
+          <span class="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">PCS #${pcsCount}</span>
+          ${pcsCount > 1 ? `<button type="button" onclick="removePcsRow('${card.id}')" class="text-xs text-red-500 font-bold hover:underline">削除</button>` : ''}
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div><label class="font-bold">PCS番号</label><input type="text" class="pcs-no w-full border rounded p-1.5" value="${data.pcsNo || 'PCS' + pcsCount}"></div>
+          <div><label class="font-bold">設備ID</label><input type="text" class="pcs-eqid w-full border rounded p-1.5" value="${data.equipmentId || ''}"></div>
+          <div><label class="font-bold">型式</label><input type="text" class="pcs-model w-full border rounded p-1.5" value="${data.model || ''}"></div>
+          <div><label class="font-bold">製造番号</label><input type="text" class="pcs-serial w-full border rounded p-1.5" value="${data.serialNo || ''}"></div>
+          <div><label class="font-bold">瞬間発電量 (kW)</label><input type="text" class="pcs-instant w-full border rounded p-1.5" value="${data.instantPower || ''}"></div>
+          <div><label class="font-bold">積算発電量 (kWh)</label><input type="text" class="pcs-cumulative w-full border rounded p-1.5" value="${data.cumulativePower || ''}"></div>
+          <div><label class="font-bold">絶縁抵抗値 (MΩ)</label><input type="text" class="pcs-insulation w-full border rounded p-1.5" value="${data.insulationResistance || ''}"></div>
+          <div><label class="font-bold">動作電圧 (V) / 電流 (A)</label>
+            <div class="flex gap-1"><input type="text" class="pcs-vol w-1/2 border rounded p-1.5" placeholder="V" value="${data.operatingVoltage || ''}"><input type="text" class="pcs-cur w-1/2 border rounded p-1.5" placeholder="A" value="${data.operatingCurrent || ''}"></div>
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+    }
+
+    function removePcsRow(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
+    function collectPcsList() {
+      const list = [];
+      document.querySelectorAll('.pcs-card').forEach(card => {
+        list.push({
+          pcsNo: card.querySelector('.pcs-no').value,
+          equipmentId: card.querySelector('.pcs-eqid').value,
+          model: card.querySelector('.pcs-model').value,
+          serialNo: card.querySelector('.pcs-serial').value,
+          instantPower: card.querySelector('.pcs-instant').value,
+          cumulativePower: card.querySelector('.pcs-cumulative').value,
+          insulationResistance: card.querySelector('.pcs-insulation').value,
+          operatingVoltage: card.querySelector('.pcs-vol').value,
+          operatingCurrent: card.querySelector('.pcs-cur').value
+        });
+      });
+      return list;
+    }
 
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -220,12 +320,24 @@
         client: document.getElementById('client').value,
         email: document.getElementById('email').value,
         address: document.getElementById('address').value,
+        plantName: document.getElementById('plantName').value,
+        chiefEngineer: document.getElementById('chiefEngineer').value,
+        powerCompany: document.getElementById('powerCompany').value,
+        maxOutput: document.getElementById('maxOutput').value,
+        ratedOutput: document.getElementById('ratedOutput').value,
+        weather: document.getElementById('weather').value,
+        indoorTemp: document.getElementById('indoorTemp').value,
+        outdoorTemp: document.getElementById('outdoorTemp').value,
+        indoorHumidity: document.getElementById('indoorHumidity').value,
+        outdoorHumidity: document.getElementById('outdoorHumidity').value,
+        solarRadiation: document.getElementById('solarRadiation').value,
         status: document.querySelector('input[name="status"]:checked').value,
         comment: document.getElementById('comment').value,
         details: document.getElementById('details').value,
         photoMainData: photos[0],
         photoPcsData: photos[1],
-        photoSubData: photos[2]
+        photoSubData: photos[2],
+        pcsList: collectPcsList() // ★PCS配列表データを回収
       };
 
       if (window.google && google.script && google.script.run) {
@@ -287,7 +399,6 @@
           document.getElementById('editAddress').value = item.address || '';
           document.getElementById('editStatus').value = item.status || '〇 良好';
           document.getElementById('editComment').value = item.comment || '';
-          document.getElementById('editDetails').value = item.details || '';
           document.getElementById('editModal').classList.remove('hidden');
           document.getElementById('editModal').classList.add('flex');
         }).getInspectionData();
@@ -313,7 +424,6 @@
         address: document.getElementById('editAddress').value,
         status: document.getElementById('editStatus').value,
         comment: document.getElementById('editComment').value,
-        details: document.getElementById('editDetails').value,
         photoMainData: fileMain ? await compressImageFile(fileMain) : '',
         photoPcsData: filePcs ? await compressImageFile(filePcs) : '',
         photoSubData: fileSub ? await compressImageFile(fileSub) : ''

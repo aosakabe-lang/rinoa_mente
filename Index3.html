@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>REN | 太陽光発電設備 点検報告システム v4.0</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- アイコンライブラリ（Lucide）の読み込み -->
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
@@ -57,15 +58,17 @@
   <!-- メインコンテンツ -->
   <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
+    <!-- =========================
+         TAB 1: 入力フォーム
+    ========================= -->
     <section id="tab-input" class="tab-content space-y-6">
       <form id="inspectionForm" onsubmit="handleFormSubmit(event)" class="space-y-6">
         
-        <!-- 1. 基本情報・案件タイプ -->
+        <!-- 1. 基本情報・現場区分 -->
         <div class="glass-card p-6 space-y-4">
           <h2 class="text-base font-bold text-slate-900 flex items-center gap-2 border-b pb-3">
             <i data-lucide="user-check" class="w-5 h-5 text-blue-600"></i> 1. 基本情報・現場区分
           </h2>
-
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label class="block text-xs font-bold text-slate-700 mb-1">電圧区分 *</label>
@@ -113,7 +116,7 @@
             <div><label class="font-bold">天気</label><input type="text" id="weather" placeholder="晴れ" class="w-full border rounded p-2 mt-1"></div>
             <div><label class="font-bold">外気温度 (℃)</label><input type="text" id="outdoorTemp" placeholder="29.0" class="w-full border rounded p-2 mt-1"></div>
             
-            <!-- 高圧時のみ表示する項目 -->
+            <!-- 高圧時のみ表示 -->
             <div class="high-voltage-only hidden"><label class="font-bold text-indigo-700">電気主任技術者</label><input type="text" id="chiefEngineer" placeholder="高圧のみ入力" class="w-full border border-indigo-300 bg-indigo-50/50 rounded p-2 mt-1"></div>
             <div class="high-voltage-only hidden"><label class="font-bold text-indigo-700">電力会社</label><input type="text" id="powerCompany" placeholder="高圧のみ入力" class="w-full border border-indigo-300 bg-indigo-50/50 rounded p-2 mt-1"></div>
             <div class="high-voltage-only hidden"><label class="font-bold text-indigo-700">室内温度 (℃)</label><input type="text" id="indoorTemp" placeholder="高圧のみ入力" class="w-full border border-indigo-300 bg-indigo-50/50 rounded p-2 mt-1"></div>
@@ -126,12 +129,12 @@
             <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
               <i data-lucide="cpu" class="w-5 h-5 text-emerald-600"></i> 3. PCS（パワコン）点検測定データ
             </h2>
-            <button type="button" onclick="addPcsRow()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1">
+            <button type="button" onclick="addPcsRow()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1 shadow-sm">
               <i data-lucide="plus" class="w-4 h-4"></i> PCS追加
             </button>
           </div>
           <div id="pcsContainer" class="space-y-4">
-            <!-- JavaScriptで動的作成 -->
+            <!-- JSで動的生成 -->
           </div>
         </div>
 
@@ -165,7 +168,7 @@
             <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">③ 異常写真</label><input type="file" id="photoSub" accept="image/*" class="w-full text-[10px]"></div>
             <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">④ 太陽光パネル状況</label><input type="file" id="photoPanel" accept="image/*" class="w-full text-[10px]"></div>
             <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">⑤ パネル押さえ金具</label><input type="file" id="photoClamp" accept="image/*" class="w-full text-[10px]"></div>
-            <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">⑥ アレイ脚部 (ねじ・架台)</label><input type="file" id="photoLeg" accept="image/*" class="w-full text-[10px]"></div>
+            <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">⑥ アレイ脚部 (ねじ等)</label><input type="file" id="photoLeg" accept="image/*" class="w-full text-[10px]"></div>
             <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">⑦ パネル裏面 (配線等)</label><input type="file" id="photoBack" accept="image/*" class="w-full text-[10px]"></div>
           </div>
         </div>
@@ -176,18 +179,20 @@
       </form>
     </section>
 
-    <!-- TAB 2: 履歴一覧（既存同様） -->
+    <!-- =========================
+         TAB 2: 履歴一覧
+    ========================= -->
     <section id="tab-history" class="tab-content space-y-6 hidden">
       <div class="glass-card p-6">
         <h2 class="text-lg font-bold text-slate-900 mb-4">点検履歴一覧</h2>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs">
-            <thead class="bg-slate-100 font-bold">
+            <thead class="bg-slate-100 font-bold border-b">
               <tr>
                 <th class="p-3">点検日時 / ID</th>
                 <th class="p-3">施主名 / 設置住所</th>
                 <th class="p-3">担当者</th>
-                <th class="p-3">総合判定</th>
+                <th class="p-3">判定</th>
                 <th class="p-3">ステータス</th>
                 <th class="p-3 text-right">操作</th>
               </tr>
@@ -200,13 +205,51 @@
 
   </main>
 
+  <!-- =========================
+       確認・補正編集モーダル
+  ========================= -->
+  <div id="editModal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 overflow-y-auto">
+    <div class="w-full max-w-4xl bg-white border border-slate-300 rounded-2xl shadow-2xl p-6 space-y-6 my-8">
+      <div class="flex items-center justify-between border-b pb-4">
+        <h3 class="text-lg font-bold text-slate-900">点検情報の確認・補正編集モーダル</h3>
+        <button onclick="closeEditModal()" class="p-2 text-slate-500 hover:text-slate-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="editForm" onsubmit="handleEditSubmit(event)" class="space-y-4">
+        <input type="hidden" id="editId">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div><label class="block text-xs font-bold mb-1">施主名</label><input type="text" id="editClient" required class="w-full border rounded-lg p-2 text-xs"></div>
+          <div><label class="block text-xs font-bold mb-1">担当者</label><input type="text" id="editWorker" required class="w-full border rounded-lg p-2 text-xs"></div>
+          <div><label class="block text-xs font-bold mb-1">メール</label><input type="email" id="editEmail" class="w-full border rounded-lg p-2 text-xs"></div>
+        </div>
+        <div><label class="block text-xs font-bold mb-1">住所</label><input type="text" id="editAddress" class="w-full border rounded-lg p-2 text-xs"></div>
+        <div><label class="block text-xs font-bold mb-1">判定</label>
+          <select id="editStatus" class="w-full border rounded-lg p-2 text-xs">
+            <option value="〇 良好">〇 良好</option>
+            <option value="△ 経過観察">△ 経過観察</option>
+            <option value="× 要修繕">× 要修繕</option>
+          </select>
+        </div>
+        <div><label class="block text-xs font-bold mb-1">総合コメント</label><textarea id="editComment" rows="3" class="w-full border rounded-lg p-2 text-xs"></textarea></div>
+
+        <div class="flex justify-end gap-3 border-t pt-4">
+          <button type="button" onclick="closeEditModal()" class="px-4 py-2 bg-slate-200 text-slate-800 text-xs rounded-lg font-bold hover:bg-slate-300">キャンセル</button>
+          <button type="submit" id="saveEditBtn" class="px-5 py-2 bg-cyan-600 text-white text-xs rounded-lg font-bold hover:bg-cyan-700">補正内容を保存</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     let pcsCount = 0;
 
     document.addEventListener('DOMContentLoaded', () => {
-      lucide.createIcons();
+      // lucideの存在チェックを行ってから実行（エラー防止）
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
       addPcsRow();
       toggleVoltageFields();
+      loadInspectionData();
     });
 
     function toggleVoltageFields() {
@@ -217,7 +260,6 @@
         else el.classList.add('hidden');
       });
 
-      // 各PCS行の高圧項目も制御
       document.querySelectorAll('.pcs-voltage-field').forEach(el => {
         if (type === '高圧') el.classList.remove('hidden');
         else el.classList.add('hidden');
@@ -251,7 +293,6 @@
           <div><label class="font-bold">瞬間発電量 (kW)</label><input type="text" class="pcs-instant w-full border rounded p-1.5 mt-1" value="${data.instantPower || ''}"></div>
           <div><label class="font-bold">積算発電量 (kWh)</label><input type="text" class="pcs-cumulative w-full border rounded p-1.5 mt-1" value="${data.cumulativePower || ''}"></div>
           
-          <!-- 絶縁抵抗値（プルダウン 0 or 100） -->
           <div>
             <label class="font-bold">絶縁抵抗値 (MΩ) *</label>
             <select class="pcs-insulation w-full border rounded p-1.5 mt-1 font-bold bg-white" onchange="checkInsulationWarning(this)">
@@ -260,7 +301,6 @@
             </select>
           </div>
 
-          <!-- 高圧のみ表示：動作電圧/電流 -->
           <div class="pcs-voltage-field hidden">
             <label class="font-bold text-indigo-700">動作電圧 (V) / 電流 (A)</label>
             <div class="flex gap-1 mt-1">
@@ -269,7 +309,6 @@
             </div>
           </div>
 
-          <!-- 備考・不良メモ欄 -->
           <div class="col-span-2 md:col-span-4 pcs-note-box ${insulationVal === '0' ? '' : 'hidden'}">
             <label class="font-bold text-red-600 block mb-1">⚠️ 不良内容・メモ（絶縁抵抗値0の理由を入力）</label>
             <input type="text" class="pcs-note w-full border border-red-300 bg-red-50 rounded p-2" placeholder="例：3系統目ケーブル損傷による地全事故" value="${data.note || ''}">
@@ -323,8 +362,47 @@
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.getElementById(tabId).classList.remove('hidden');
+      document.querySelectorAll('.nav-tab').forEach(el => {
+        el.classList.remove('bg-slate-800', 'text-white');
+        el.classList.add('text-slate-600', 'hover:bg-slate-100');
+      });
+      const activeNav = document.getElementById('nav-' + tabId);
+      activeNav.classList.remove('text-slate-600', 'hover:bg-slate-100');
+      activeNav.classList.add('bg-slate-800', 'text-white');
+      
+      if (tabId === 'tab-history') loadInspectionData();
     }
 
+    function showToast(title, message, type = 'info') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-title').textContent = title;
+      document.getElementById('toast-message').textContent = message;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+    }
+
+    function compressImageFile(file, maxWidth = 1000, quality = 0.7) {
+      return new Promise((resolve) => {
+        if (!file) return resolve('');
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const scale = Math.min(1, maxWidth / img.width);
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.round(img.width * scale);
+            canvas.height = Math.round(img.height * scale);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', quality));
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // フォーム送信（GAS連携）
     async function handleFormSubmit(e) {
       e.preventDefault();
       const workerStr = getSelectedWorkers();
@@ -333,25 +411,158 @@
         return;
       }
 
-      const payload = {
-        voltageType: document.getElementById('voltageType').value,
-        client: document.getElementById('client').value,
-        email: document.getElementById('email').value,
-        address: document.getElementById('address').value,
-        worker: workerStr,
-        plantName: document.getElementById('plantName').value,
-        weather: document.getElementById('weather').value,
-        outdoorTemp: document.getElementById('outdoorTemp').value,
-        chiefEngineer: document.getElementById('chiefEngineer').value,
-        powerCompany: document.getElementById('powerCompany').value,
-        indoorTemp: document.getElementById('indoorTemp').value,
-        status: document.querySelector('input[name="status"]:checked').value,
-        comment: document.getElementById('comment').value,
-        pcsList: collectPcsList()
-      };
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.textContent = '保存中...（写真アップロード中）';
+      submitBtn.disabled = true;
 
-      console.log('送信データ:', payload);
-      alert('点検データを正常に送信・保存しました。');
+      try {
+        const photos = await Promise.all([
+          compressImageFile(document.getElementById('photoMain').files[0]),
+          compressImageFile(document.getElementById('photoPcs').files[0]),
+          compressImageFile(document.getElementById('photoSub').files[0]),
+          compressImageFile(document.getElementById('photoPanel').files[0]),
+          compressImageFile(document.getElementById('photoClamp').files[0]),
+          compressImageFile(document.getElementById('photoLeg').files[0]),
+          compressImageFile(document.getElementById('photoBack').files[0])
+        ]);
+
+        const payload = {
+          voltageType: document.getElementById('voltageType').value,
+          client: document.getElementById('client').value,
+          email: document.getElementById('email').value,
+          address: document.getElementById('address').value,
+          worker: workerStr,
+          plantName: document.getElementById('plantName').value,
+          weather: document.getElementById('weather').value,
+          outdoorTemp: document.getElementById('outdoorTemp').value,
+          chiefEngineer: document.getElementById('chiefEngineer').value,
+          powerCompany: document.getElementById('powerCompany').value,
+          indoorTemp: document.getElementById('indoorTemp').value,
+          status: document.querySelector('input[name="status"]:checked').value,
+          comment: document.getElementById('comment').value,
+          
+          photoMainData: photos[0],
+          photoPcsData: photos[1],
+          photoSubData: photos[2],
+          photoPanelData: photos[3],
+          photoClampData: photos[4],
+          photoLegData: photos[5],
+          photoBackData: photos[6],
+          pcsList: collectPcsList()
+        };
+
+        if (window.google && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler((res) => {
+              showToast('保存完了', res.message);
+              document.getElementById('inspectionForm').reset();
+              submitBtn.textContent = '点検報告データを保存';
+              submitBtn.disabled = false;
+              switchTab('tab-history');
+            })
+            .withFailureHandler((err) => {
+              alert('エラーが発生しました: ' + err.message);
+              submitBtn.textContent = '点検報告データを保存';
+              submitBtn.disabled = false;
+            })
+            .saveInspectionData(payload);
+        } else {
+          alert('GAS環境外での動作です。');
+          submitBtn.textContent = '点検報告データを保存';
+          submitBtn.disabled = false;
+        }
+      } catch (error) {
+        alert('画像処理エラー: ' + error.message);
+        submitBtn.textContent = '点検報告データを保存';
+        submitBtn.disabled = false;
+      }
+    }
+
+    // ==========================================
+    // 履歴タブ・編集モーダル処理
+    // ==========================================
+    function loadInspectionData() {
+      if (window.google && google.script && google.script.run) {
+        google.script.run.withSuccessHandler(renderHistoryTable).getInspectionData();
+      }
+    }
+
+    function renderHistoryTable(data) {
+      const tbody = document.getElementById('historyTableBody');
+      tbody.innerHTML = '';
+      if (!data || data.length === 0) return;
+
+      data.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = "border-b hover:bg-slate-50";
+
+        let actions = `<button onclick="openEditModal('${item.id}')" class="px-2.5 py-1.5 bg-slate-700 text-white rounded-md text-[11px] font-bold">確認</button>`;
+        if (item.processStatus === '下書き') {
+          actions += `<button onclick="confirmInspection('${item.id}')" class="px-2.5 py-1.5 bg-amber-600 text-white rounded-md text-[11px] font-bold ml-1">確定</button>`;
+        } else if (['確定', '送信エラー'].includes(item.processStatus)) {
+          actions += `<button onclick="savePdfReport('${item.id}')" class="px-2.5 py-1.5 bg-cyan-600 text-white rounded-md text-[11px] font-bold ml-1">報告書作成</button>`;
+        }
+
+        tr.innerHTML = `
+          <td class="p-3"><strong>${item.date}</strong><br><span class="text-[10px] text-slate-400">${item.id}</span></td>
+          <td class="p-3"><strong>${item.client} 様</strong><br><span class="text-[10px] text-slate-500">${item.address}</span></td>
+          <td class="p-3">${item.worker}</td>
+          <td class="p-3">${item.status}</td>
+          <td class="p-3"><span class="px-2 py-0.5 bg-slate-200 rounded text-[10px] font-bold">${item.processStatus}</span></td>
+          <td class="p-3 text-right">${actions}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function openEditModal(id) {
+      if (window.google && google.script && google.script.run) {
+        google.script.run.withSuccessHandler((data) => {
+          const item = data.find(x => x.id === id);
+          if (!item) return;
+          document.getElementById('editId').value = item.id;
+          document.getElementById('editClient').value = item.client || '';
+          document.getElementById('editWorker').value = item.worker || '';
+          document.getElementById('editEmail').value = item.email || '';
+          document.getElementById('editAddress').value = item.address || '';
+          document.getElementById('editStatus').value = item.status || '〇 良好';
+          document.getElementById('editComment').value = item.comment || '';
+          document.getElementById('editModal').classList.remove('hidden');
+          document.getElementById('editModal').classList.add('flex');
+        }).getInspectionData();
+      }
+    }
+
+    function closeEditModal() {
+      document.getElementById('editModal').classList.add('hidden');
+      document.getElementById('editModal').classList.remove('flex');
+    }
+
+    async function handleEditSubmit(e) {
+      e.preventDefault();
+      // 編集時の送信ロジック（Code.gs 側の updateInspectionData が必要になります）
+      closeEditModal();
+      showToast('通知', '補正機能を呼び出しました（未実装）');
+    }
+
+    function confirmInspection(id) {
+      if (window.google && google.script && google.script.run) {
+        google.script.run.withSuccessHandler(loadInspectionData).confirmInspection(id);
+      }
+    }
+
+    function savePdfReport(id) {
+      if (window.google && google.script && google.script.run) {
+        showToast('処理中', 'PDFを保存中...', 'info');
+        google.script.run
+          .withSuccessHandler((res) => {
+            showToast('作成完了', res.name, 'success');
+            loadInspectionData();
+            window.open(res.url, '_blank');
+          })
+          .savePdfReport(id);
+      }
     }
   </script>
 </body>

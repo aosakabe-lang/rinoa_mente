@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="ja" class="h-full bg-slate-900">
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>REN | 太陽光発電設備 点検報告システム v4.0</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Noto+Sans+JP:wght@400;500;700;900&display=swap');
+    body { font-family: 'Plus Jakarta Sans', 'Noto Sans JP', sans-serif; background: #eef2f6; color: #172033; }
+    .glass-card { background: #ffffff; border: 1px solid #d8dee8; border-radius: 12px; box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05); }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(51, 65, 85, 0.5); border-radius: 99px; }
+  </style>
+</head>
+<body class="h-full text-slate-800 bg-slate-100 antialiased custom-scrollbar flex flex-col">
+
+  <!-- ヘッダー -->
+  <header class="no-print sticky top-0 z-40 border-b border-slate-300 bg-white shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center">
+            <i data-lucide="sun" class="w-5 h-5 text-amber-400 stroke-[2.5]"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold tracking-wider text-slate-900 text-base">REN</span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded bg-slate-100 border border-slate-300 text-slate-600">MAINTENANCE v4.0</span>
+            </div>
+            <p class="text-[11px] text-slate-500 font-medium">株式会社リノア / 太陽光発電点検管理</p>
+          </div>
+        </div>
+
+        <nav class="flex items-center gap-2">
+          <button onclick="switchTab('tab-input')" id="nav-tab-input" class="nav-tab active flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold bg-slate-800 text-white shadow-sm">
+            <i data-lucide="file-plus" class="w-4 h-4"></i> 点検データ入力
+          </button>
+          <button onclick="switchTab('tab-history')" id="nav-tab-history" class="nav-tab flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold text-slate-600 hover:text-slate-900 hover:bg-slate-100">
+            <i data-lucide="database" class="w-4 h-4"></i> 履歴・データ確認
+          </button>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- トースト通知 -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-slate-800 text-white shadow-2xl">
+      <div id="toast-icon" class="p-2 rounded-lg bg-blue-500/20 text-blue-400"><i data-lucide="info" class="w-5 h-5"></i></div>
+      <div><p id="toast-title" class="text-xs font-bold">通知</p><p id="toast-message" class="text-xs text-slate-300">更新しました</p></div>
+    </div>
+  </div>
+
+  <!-- メインコンテンツ -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <section id="tab-input" class="tab-content space-y-6">
+      <form id="inspectionForm" onsubmit="handleFormSubmit(event)" class="space-y-6">
+        
+        <!-- 1. 基本情報・案件タイプ -->
+        <div class="glass-card p-6 space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2 border-b pb-3">
+            <i data-lucide="user-check" class="w-5 h-5 text-blue-600"></i> 1. 基本情報・現場区分
+          </h2>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">電圧区分 *</label>
+              <select id="voltageType" onchange="toggleVoltageFields()" class="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-bold bg-amber-50 border-amber-300">
+                <option value="低圧">低圧（一般受電）</option>
+                <option value="高圧">高圧（主任技術者報告対象）</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">施主様名 *</label>
+              <input type="text" id="client" required placeholder="例：株式会社 細野総合企画" class="w-full rounded-lg border border-slate-300 p-2 text-xs">
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1">メールアドレス（任意）</label>
+              <input type="email" id="email" placeholder="入力なしも可能" class="w-full rounded-lg border border-slate-300 p-2 text-xs">
+            </div>
+            <div class="md:col-span-3">
+              <label class="block text-xs font-bold text-slate-700 mb-1">設置住所 *</label>
+              <input type="text" id="address" required placeholder="群馬県桐生市新里町赤城山712-28" class="w-full rounded-lg border border-slate-300 p-2 text-xs">
+            </div>
+          </div>
+
+          <!-- 作業担当者（チェックボックス選択） -->
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-2">作業担当者名（複数選択可） *</label>
+            <div class="flex flex-wrap gap-4 p-3 bg-slate-50 border rounded-lg text-xs">
+              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" name="workers" value="中村 祐輔" class="rounded border-slate-300"> 中村 祐輔</label>
+              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" name="workers" value="速水 蓮" class="rounded border-slate-300"> 速水 蓮</label>
+              <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" name="workers" value="市川 喜徳" class="rounded border-slate-300"> 市川 喜徳</label>
+              <div class="flex items-center gap-1 ml-auto">
+                <span class="text-slate-400">その他:</span>
+                <input type="text" id="otherWorker" placeholder="手入力担当者" class="border rounded px-2 py-1 text-xs w-32">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. 発電所情報 & 気象条件 -->
+        <div class="glass-card p-6 space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2 border-b pb-3">
+            <i data-lucide="sun" class="w-5 h-5 text-amber-500"></i> 2. 発電所情報 & 気象条件
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+            <div><label class="font-bold">発電所名</label><input type="text" id="plantName" placeholder="赤城17-16太陽光発電所" class="w-full border rounded p-2 mt-1"></div>
+            <div><label class="font-bold">天気</label><input type="text" id="weather" placeholder="晴れ" class="w-full border rounded p-2 mt-1"></div>
+            <div><label class="font-bold">外気温度 (℃)</label><input type="text" id="outdoorTemp" placeholder="29.0" class="w-full border rounded p-2 mt-1"></div>
+            
+            <!-- 高圧時のみ表示する項目 -->
+            <div class="high-voltage-only hidden"><label class="font-bold text-indigo-700">電気主任技術者</label><input type="text" id="chiefEngineer" placeholder="高圧のみ入力" class="w-full border border-indigo-300 bg-indigo-50/50 rounded p-2 mt-1"></div>
+            <div class="high-voltage-only hidden"><label class="font-bold text-indigo-700">電力会社</label><input type="text" id="powerCompany" placeholder="高圧のみ入力" class="w-full border border-indigo-300 bg-indigo-50/50 rounded p-2 mt-1"></div>
+            <div class="high-voltage-only hidden"><label class="font-bold text-indigo-700">室内温度 (℃)</label><input type="text" id="indoorTemp" placeholder="高圧のみ入力" class="w-full border border-indigo-300 bg-indigo-50/50 rounded p-2 mt-1"></div>
+          </div>
+        </div>
+
+        <!-- 3. PCS（パワコン）点検測定データ -->
+        <div class="glass-card p-6 space-y-4">
+          <div class="flex items-center justify-between border-b pb-3">
+            <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="cpu" class="w-5 h-5 text-emerald-600"></i> 3. PCS（パワコン）点検測定データ
+            </h2>
+            <button type="button" onclick="addPcsRow()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1">
+              <i data-lucide="plus" class="w-4 h-4"></i> PCS追加
+            </button>
+          </div>
+          <div id="pcsContainer" class="space-y-4">
+            <!-- JavaScriptで動的作成 -->
+          </div>
+        </div>
+
+        <!-- 4. 総合判定・所見 -->
+        <div class="glass-card p-6 space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2 border-b pb-3">
+            <i data-lucide="clipboard-check" class="w-5 h-5 text-cyan-600"></i> 4. 総合判定・所見メモ
+          </h2>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-2">総合判定</label>
+            <div class="flex gap-4 text-xs font-bold">
+              <label class="flex items-center gap-2 border p-3 rounded-lg bg-green-50/50 cursor-pointer"><input type="radio" name="status" value="〇 良好" checked> 〇 良好</label>
+              <label class="flex items-center gap-2 border p-3 rounded-lg bg-amber-50/50 cursor-pointer"><input type="radio" name="status" value="△ 経過観察"> △ 経過観察</label>
+              <label class="flex items-center gap-2 border p-3 rounded-lg bg-red-50/50 cursor-pointer"><input type="radio" name="status" value="× 要修繕"> × 要修繕</label>
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">所見・特記事項メモ</label>
+            <textarea id="comment" rows="3" placeholder="I-Vカーブの揺らぎは日射変化や森林の影の影響によるもの、等のメモを入力" class="w-full rounded-lg border p-3 text-xs"></textarea>
+          </div>
+        </div>
+
+        <!-- 5. 現場写真アップロード -->
+        <div class="glass-card p-6 space-y-4">
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2 border-b pb-3">
+            <i data-lucide="camera" class="w-5 h-5 text-slate-700"></i> 5. 現場点検写真アップロード
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs">
+            <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">① 全体写真</label><input type="file" id="photoMain" accept="image/*" class="w-full text-[10px]"></div>
+            <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">② パワコン写真</label><input type="file" id="photoPcs" accept="image/*" class="w-full text-[10px]"></div>
+            <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">③ 異常写真</label><input type="file" id="photoSub" accept="image/*" class="w-full text-[10px]"></div>
+            <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">④ 太陽光パネル状況</label><input type="file" id="photoPanel" accept="image/*" class="w-full text-[10px]"></div>
+            <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">⑤ パネル押さえ金具</label><input type="file" id="photoClamp" accept="image/*" class="w-full text-[10px]"></div>
+            <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">⑥ アレイ脚部 (ねじ・架台)</label><input type="file" id="photoLeg" accept="image/*" class="w-full text-[10px]"></div>
+            <div class="p-3 border rounded-lg bg-slate-50"><label class="font-bold block mb-1">⑦ パネル裏面 (配線等)</label><input type="file" id="photoBack" accept="image/*" class="w-full text-[10px]"></div>
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn" class="w-full py-3.5 rounded-xl bg-slate-800 text-white font-bold text-sm hover:bg-slate-700 transition shadow-md">
+          点検報告データを保存
+        </button>
+      </form>
+    </section>
+
+    <!-- TAB 2: 履歴一覧（既存同様） -->
+    <section id="tab-history" class="tab-content space-y-6 hidden">
+      <div class="glass-card p-6">
+        <h2 class="text-lg font-bold text-slate-900 mb-4">点検履歴一覧</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 font-bold">
+              <tr>
+                <th class="p-3">点検日時 / ID</th>
+                <th class="p-3">施主名 / 設置住所</th>
+                <th class="p-3">担当者</th>
+                <th class="p-3">総合判定</th>
+                <th class="p-3">ステータス</th>
+                <th class="p-3 text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody id="historyTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    let pcsCount = 0;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      addPcsRow();
+      toggleVoltageFields();
+    });
+
+    function toggleVoltageFields() {
+      const type = document.getElementById('voltageType').value;
+      const highVoltageEls = document.querySelectorAll('.high-voltage-only');
+      highVoltageEls.forEach(el => {
+        if (type === '高圧') el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
+
+      // 各PCS行の高圧項目も制御
+      document.querySelectorAll('.pcs-voltage-field').forEach(el => {
+        if (type === '高圧') el.classList.remove('hidden');
+        else el.classList.add('hidden');
+      });
+    }
+
+    function addPcsRow(data = {}) {
+      pcsCount++;
+      const container = document.getElementById('pcsContainer');
+      const card = document.createElement('div');
+      card.className = "p-4 border rounded-xl bg-slate-50 space-y-3 relative pcs-card";
+      card.id = `pcsCard_${pcsCount}`;
+
+      const insulationVal = data.insulationResistance || '100';
+
+      card.innerHTML = `
+        <div class="flex justify-between items-center border-b pb-2">
+          <span class="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-md">PCS #${pcsCount}</span>
+          ${pcsCount > 1 ? `<button type="button" onclick="removePcsRow('${card.id}')" class="text-xs text-red-500 font-bold hover:underline">削除</button>` : ''}
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div><label class="font-bold">PCS番号</label><input type="text" class="pcs-no w-full border rounded p-1.5 mt-1" value="${data.pcsNo || 'PCS ' + pcsCount}"></div>
+          <div><label class="font-bold">型式</label><input type="text" class="pcs-model w-full border rounded p-1.5 mt-1" value="${data.model || ''}"></div>
+          <div><label class="font-bold">製造番号</label><input type="text" class="pcs-serial w-full border rounded p-1.5 mt-1" value="${data.serialNo || ''}"></div>
+          <div><label class="font-bold">端子増し締め</label>
+            <select class="pcs-tightening w-full border rounded p-1.5 mt-1 font-bold">
+              <option value="済" ${data.tightening === '未' ? '' : 'selected'}>済</option>
+              <option value="未" ${data.tightening === '未' ? 'selected' : ''}>未</option>
+            </select>
+          </div>
+          <div><label class="font-bold">瞬間発電量 (kW)</label><input type="text" class="pcs-instant w-full border rounded p-1.5 mt-1" value="${data.instantPower || ''}"></div>
+          <div><label class="font-bold">積算発電量 (kWh)</label><input type="text" class="pcs-cumulative w-full border rounded p-1.5 mt-1" value="${data.cumulativePower || ''}"></div>
+          
+          <!-- 絶縁抵抗値（プルダウン 0 or 100） -->
+          <div>
+            <label class="font-bold">絶縁抵抗値 (MΩ) *</label>
+            <select class="pcs-insulation w-full border rounded p-1.5 mt-1 font-bold bg-white" onchange="checkInsulationWarning(this)">
+              <option value="100" ${insulationVal === '100' ? 'selected' : ''}>100 (正常・良好)</option>
+              <option value="0" ${insulationVal === '0' ? 'selected' : ''}>0 (不良・異常あり)</option>
+            </select>
+          </div>
+
+          <!-- 高圧のみ表示：動作電圧/電流 -->
+          <div class="pcs-voltage-field hidden">
+            <label class="font-bold text-indigo-700">動作電圧 (V) / 電流 (A)</label>
+            <div class="flex gap-1 mt-1">
+              <input type="text" class="pcs-vol w-1/2 border rounded p-1.5" placeholder="V" value="${data.operatingVoltage || ''}">
+              <input type="text" class="pcs-cur w-1/2 border rounded p-1.5" placeholder="A" value="${data.operatingCurrent || ''}">
+            </div>
+          </div>
+
+          <!-- 備考・不良メモ欄 -->
+          <div class="col-span-2 md:col-span-4 pcs-note-box ${insulationVal === '0' ? '' : 'hidden'}">
+            <label class="font-bold text-red-600 block mb-1">⚠️ 不良内容・メモ（絶縁抵抗値0の理由を入力）</label>
+            <input type="text" class="pcs-note w-full border border-red-300 bg-red-50 rounded p-2" placeholder="例：3系統目ケーブル損傷による地全事故" value="${data.note || ''}">
+          </div>
+        </div>
+      `;
+      container.appendChild(card);
+      toggleVoltageFields();
+    }
+
+    function checkInsulationWarning(selectEl) {
+      const noteBox = selectEl.closest('.pcs-card').querySelector('.pcs-note-box');
+      if (selectEl.value === '0') {
+        noteBox.classList.remove('hidden');
+      } else {
+        noteBox.classList.add('hidden');
+      }
+    }
+
+    function removePcsRow(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
+    function getSelectedWorkers() {
+      const checked = Array.from(document.querySelectorAll('input[name="workers"]:checked')).map(cb => cb.value);
+      const other = document.getElementById('otherWorker').value.trim();
+      if (other) checked.push(other);
+      return checked.join(' / ');
+    }
+
+    function collectPcsList() {
+      const list = [];
+      document.querySelectorAll('.pcs-card').forEach(card => {
+        list.push({
+          pcsNo: card.querySelector('.pcs-no').value,
+          model: card.querySelector('.pcs-model').value,
+          serialNo: card.querySelector('.pcs-serial').value,
+          tightening: card.querySelector('.pcs-tightening').value,
+          instantPower: card.querySelector('.pcs-instant').value,
+          cumulativePower: card.querySelector('.pcs-cumulative').value,
+          insulationResistance: card.querySelector('.pcs-insulation').value,
+          operatingVoltage: card.querySelector('.pcs-vol') ? card.querySelector('.pcs-vol').value : '',
+          operatingCurrent: card.querySelector('.pcs-cur') ? card.querySelector('.pcs-cur').value : '',
+          note: card.querySelector('.pcs-note') ? card.querySelector('.pcs-note').value : ''
+        });
+      });
+      return list;
+    }
+
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById(tabId).classList.remove('hidden');
+    }
+
+    async function handleFormSubmit(e) {
+      e.preventDefault();
+      const workerStr = getSelectedWorkers();
+      if (!workerStr) {
+        alert('作業担当者を選択してください。');
+        return;
+      }
+
+      const payload = {
+        voltageType: document.getElementById('voltageType').value,
+        client: document.getElementById('client').value,
+        email: document.getElementById('email').value,
+        address: document.getElementById('address').value,
+        worker: workerStr,
+        plantName: document.getElementById('plantName').value,
+        weather: document.getElementById('weather').value,
+        outdoorTemp: document.getElementById('outdoorTemp').value,
+        chiefEngineer: document.getElementById('chiefEngineer').value,
+        powerCompany: document.getElementById('powerCompany').value,
+        indoorTemp: document.getElementById('indoorTemp').value,
+        status: document.querySelector('input[name="status"]:checked').value,
+        comment: document.getElementById('comment').value,
+        pcsList: collectPcsList()
+      };
+
+      console.log('送信データ:', payload);
+      alert('点検データを正常に送信・保存しました。');
+    }
+  </script>
+</body>
+</html>
